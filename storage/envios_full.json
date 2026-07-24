@@ -1,0 +1,56 @@
+[
+    {
+        "numero": "70383486",
+        "unidades": 423,
+        "recebido": 0,
+        "custo_envio": "0,01",
+        "data_upload": "01\/07\/2026, 18:33",
+        "data_coleta": "",
+        "status": "aguardando",
+        "ativo": true,
+        "anotacoes": "",
+        "pdf": "1782930814_0_Inbound-70383486-preparation-instructions__1_.pdf",
+        "produtos": [
+            {
+                "sku": "31178E-31178D-par",
+                "quantidade": 40
+            },
+            {
+                "sku": "36006D-36006E-Par",
+                "quantidade": 21
+            },
+            {
+                "sku": "34083D",
+                "quantidade": 37
+            },
+            {
+                "sku": "35064E",
+                "quantidade": 2
+            },
+            {
+                "sku": "36006D",
+                "quantidade": 27
+            },
+            {
+                "sku": "35063D",
+                "quantidade": 44
+            },
+            {
+                "sku": "31178D",
+                "quantidade": 100
+            },
+            {
+                "sku": "33078D-33078E-par",
+                "quantidade": 40
+            },
+            {
+                "sku": "31173E",
+                "quantidade": 12
+            },
+            {
+                "sku": "31178E",
+                "quantidade": 100
+            }
+        ]
+    }
+]

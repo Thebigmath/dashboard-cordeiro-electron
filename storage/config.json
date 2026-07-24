@@ -1,0 +1,12 @@
+{
+    "client_id": "1045256474611461",
+    "client_secret": "Xr724yDTRnnZlOkc04IS1RdD1lJafgwk",
+    "planilha_custos": "C:\\Users\\Matheus Prata\\Desktop\\ALL TIME\\estoqueall(Ollie)\\planilha de custos .xlsx",
+    "app_nome": "Cordeiro Car",
+    "app_porta": 3002,
+    "outro_app": {
+        "nome": "Flavia Stock",
+        "porta": 3001,
+        "exe": "C:\\laragon\\www\\dashboard-ml-electron\\dist\\win-unpacked\\Dashboard ML.exe"
+    }
+}
