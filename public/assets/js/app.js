@@ -64,7 +64,7 @@ function getFiltrosMarcas() {
 
 function contarFiltrosAtivos() {
     let n = 0;
-    ['f-ruptura','f-reposicao','f-semvenda','f-ajuste','f-comtransito','f-semtransito'].forEach(id => {
+    ['f-ruptura','f-reposicao','f-semvenda','f-ajuste','f-comtransito','f-semtransito','f-comestoque'].forEach(id => {
         if (document.getElementById(id)?.checked) n++;
     });
     const periodo = parseInt(document.getElementById('f-periodo')?.value) || 30;
@@ -92,6 +92,7 @@ function aplicarFiltros() {
     const fAjuste      = document.getElementById('f-ajuste')?.checked;
     const fComTransito = document.getElementById('f-comtransito')?.checked;
     const fSemTransito = document.getElementById('f-semtransito')?.checked;
+    const fComEstoque  = document.getElementById('f-comestoque')?.checked;
     const statusSel    = new Set([...(document.getElementById('f-status')?.selectedOptions || [])].map(o => o.value));
     const marcasSel    = getFiltrosMarcas();
 
@@ -125,6 +126,7 @@ function aplicarFiltros() {
     if (fAjuste)      lista = lista.filter(p => Number(p.estoque) === 0 && Number(p.vendas30) > 0);
     if (fComTransito) lista = lista.filter(p => Number(window.transitoMap[p.sku] || 0) > 0);
     if (fSemTransito) lista = lista.filter(p => Number(window.transitoMap[p.sku] || 0) === 0);
+    if (fComEstoque)  lista = lista.filter(p => Number(p.estoque) > 0);
 
     produtosFiltrados = lista;
     paginaAtual = 1;
@@ -142,7 +144,7 @@ window.toggleFiltros = function() {
 };
 
 window.limparFiltros = function() {
-    ['f-ruptura','f-reposicao','f-semvenda','f-ajuste','f-comtransito','f-semtransito'].forEach(id => {
+    ['f-ruptura','f-reposicao','f-semvenda','f-ajuste','f-comtransito','f-semtransito','f-comestoque'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.checked = false;
     });
