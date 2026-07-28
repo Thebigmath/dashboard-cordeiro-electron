@@ -21,6 +21,7 @@ let textoPesquisa     = '';
 window.produtosReposicao = [];
 window.qtdsFull   = {};
 window.transitoMap = {};
+window.custosMap   = {};
 
 const KEYWORDS_EMPILHADEIRA = ['empilhadeira','hyster','yale','bobcat','forklift','trator'];
 const MARCAS_CONHECIDAS = ['Hyster','Yale','Retrovex','Fitam','Toyota','Crown','Linde','Still','BYD','Fiat','Chevrolet','Jeep','Renault','Volkswagen','Ford','Honda','Nissan','Mitsubishi','Caterpillar','Clark'];
@@ -222,7 +223,13 @@ function renderPagina(lista, pagina) {
 
     const inputStyle = 'width:70px;background:var(--s2,#1c1c1e);border:1px solid var(--sep2,#3a3a3c);border-radius:6px;color:var(--l1,#fff);padding:3px 6px;font-size:12px;text-align:center;outline:none;';
 
-    tabela.innerHTML = fatia.map(p => `
+    tabela.innerHTML = fatia.map(p => {
+        const custo = window.custosMap[p.sku?.toLowerCase()] || 0;
+        const valorEstoque = custo > 0 ? (Number(p.estoque) * custo) : null;
+        const valorStr = valorEstoque !== null
+            ? `R$ ${valorEstoque.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2})}`
+            : '<span style="color:var(--l3)">—</span>';
+        return `
         <tr data-sku="${p.sku}">
             <td>${badgeUrgencia(p.cobertura)}</td>
             <td>${p.titulo}</td>
@@ -232,9 +239,18 @@ function renderPagina(lista, pagina) {
             <td>${p.mediaDia}</td>
             <td>${p.cobertura}</td>
             <td><strong>${p.reposicao}</strong></td>
+            <td>${valorStr}</td>
             <td><span class="qtd-transito-display" style="display:inline-block;min-width:40px;text-align:center;font-weight:600;color:${(window.transitoMap[p.sku]||0)>0?'#f39c12':'var(--l3,#8ca0b3)'}">${window.transitoMap[p.sku] || 0}</span></td>
             <td><input type="number" class="qtd-full" data-item-id="${p.item_id || ''}" min="0" placeholder="0" value="${window.qtdsFull[p.item_id] ?? (p.reposicao > 0 ? p.reposicao : '')}" style="${inputStyle}" oninput="window.qtdsFull[this.dataset.itemId]=parseInt(this.value)||0"></td>
-        </tr>`).join('');
+        </tr>`;
+    }).join('');
+
+    const totalValor = lista.reduce((acc, p) => {
+        const custo = window.custosMap[p.sku?.toLowerCase()] || 0;
+        return acc + (custo > 0 ? Number(p.estoque) * custo : 0);
+    }, 0);
+    const elTotal = document.getElementById('totalValorEstoque');
+    if (elTotal) elTotal.textContent = `R$ ${totalValor.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2})}`;
 
     renderControles(lista.length, pagina);
 }
@@ -427,4 +443,5 @@ if (btnEnviarFull) {
 }
 
 }); // DOMContentLoaded
+
 
