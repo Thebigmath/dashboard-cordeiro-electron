@@ -29,8 +29,8 @@ input{width:100%;height:44px;background:rgba(10,132,255,.06);border:0.5px solid 
 button[type=submit]{width:100%;height:44px;margin-top:12px;background:#0a84ff;border:none;border-radius:10px;color:#fff;font-size:14px;font-weight:600;cursor:pointer}
 </style></head>
 <body><div class="card">
-<h1>🔑 Autorizar — Flavia Stock</h1>
-<div class="step"><div class="n">1</div><div>Clique em <strong>Autorizar no ML</strong> e logue com a conta <strong>99249917</strong></div></div>
+<h1>🔑 Autorizar — Cordeiro Car</h1>
+<div class="step"><div class="n">1</div><div>Clique em <strong>Autorizar no ML</strong> e logue com a conta da <strong>Cordeiro Car</strong></div></div>
 <div class="step"><div class="n">2</div><div>Copie o <strong>?code=XXXXX</strong> da URL do Python.org ou claude.ai</div></div>
 <div class="step"><div class="n">3</div><div>Cole abaixo e clique <strong>Trocar pelo Token</strong></div></div>
 <a href="${authUrl}" class="btn" target="_blank">Autorizar no Mercado Livre →</a>

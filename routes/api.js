@@ -44,31 +44,66 @@ router.post('/atualizar', auth, async (req, res) => {
 
         const headers = { Authorization: `Bearer ${access_token}` };
         const LIMIT = 50;
-        const diasAlvo = 44;
+        const config   = lerJson('config.json', {});
+        const diasAlvo  = config.dias_alvo   || 35;
+        const diasColeta = config.dias_coleta || 17;
 
-        // 1. Pedidos últimos 30 dias
-        const dataInicio = new Date(Date.now() - 30 * 86400000).toISOString().replace('Z', '-03:00');
-        const dataFim = new Date().toISOString().replace('Z', '-03:00');
+        // 1. Pedidos últimos 30 dias (excluindo apenas cancelados)
+        const dataInicio = new Date(Date.now() - 30 * 86400000).toISOString();
+        const dataFim    = new Date().toISOString();
 
         escrever('Carregando pedidos...');
         let pedidos = [], offset = 0, total = null;
         do {
             const { data } = await axios.get(`https://api.mercadolibre.com/orders/search`, {
                 headers,
-                params: { seller: user_id, 'order.date_created.from': dataInicio, 'order.date_created.to': dataFim, limit: LIMIT, offset }
+                params: {
+                    seller: user_id,
+                    'order.date_created.from': dataInicio,
+                    'order.date_created.to':   dataFim,
+                    limit: LIMIT,
+                    offset
+                }
             });
             if (total === null) total = data.paging?.total || 0;
-            pedidos = pedidos.concat(data.results || []);
+            pedidos = pedidos.concat((data.results || []).filter(p => p.status !== 'cancelled'));
             offset += LIMIT;
         } while (offset < total);
         escrever(`Pedidos: ${pedidos.length}`);
 
-        // 2. Vendas por SKU
-        const vendasPorSku = {};
+        // 2. Vendas e faturamento por SKU / item_id / variação
+        const vendasPorSku      = {};
+        const faturamentoPorSku = {};
+        const vendasPorItemId   = {};   // chave: itemid (lowercase) — para listagens com SKU duplicado entre produtos diferentes
+        const faturPorItemId    = {};
+        const vendasPorVariacao = {};   // chave: "itemid:variationId"
+        const faturPorVariacao  = {};
         for (const pedido of pedidos) {
             for (const item of pedido.order_items || []) {
-                const sku = (item.item?.seller_sku || '').trim().toLowerCase();
-                if (sku) vendasPorSku[sku] = (vendasPorSku[sku] || 0) + item.quantity;
+                const sku    = (item.item?.seller_sku || '').trim().toLowerCase();
+                const itemId = (item.item?.id || '').toLowerCase();
+                const varId  = item.item?.variation_id;
+                const qty    = item.quantity || 0;
+                const preco  = (item.unit_price || 0) * qty;
+
+                if (sku) {
+                    vendasPorSku[sku]      = (vendasPorSku[sku]      || 0) + qty;
+                    faturamentoPorSku[sku] = (faturamentoPorSku[sku] || 0) + preco;
+                } else if (itemId) {
+                    vendasPorSku[itemId]      = (vendasPorSku[itemId]      || 0) + qty;
+                    faturamentoPorSku[itemId] = (faturamentoPorSku[itemId] || 0) + preco;
+                }
+                // Sempre registrar por item_id (permite cruzar vendas quando SKU é compartilhado)
+                if (itemId) {
+                    vendasPorItemId[itemId] = (vendasPorItemId[itemId] || 0) + qty;
+                    faturPorItemId[itemId]  = (faturPorItemId[itemId]  || 0) + preco;
+                }
+                // Registrar por variação quando disponível
+                if (itemId && varId) {
+                    const vk = itemId + ':' + varId;
+                    vendasPorVariacao[vk] = (vendasPorVariacao[vk] || 0) + qty;
+                    faturPorVariacao[vk]  = (faturPorVariacao[vk]  || 0) + preco;
+                }
             }
         }
 
@@ -106,38 +141,188 @@ router.post('/atualizar', auth, async (req, res) => {
         }));
         escrever(`Detalhes: ${Object.keys(produtos).length}`);
 
+        // 4b. Estoque físico total no FULL via /inventories (inclui unidades em transferência,
+        // que "available_quantity" do /items não conta — é a mesma base que o Magico usa)
+        escrever('Buscando estoque físico FULL (inventories)...');
+        const inventoryIdsSet = new Set();
+        for (const p of Object.values(produtos)) {
+            if (p.inventory_id) inventoryIdsSet.add(p.inventory_id);
+            for (const v of p.variations || []) {
+                if (v.inventory_id) inventoryIdsSet.add(v.inventory_id);
+            }
+        }
+        const inventoryIds = [...inventoryIdsSet];
+        const estoqueFullPorInventory = {};
+        const LOTE_INV = 15;
+        for (let i = 0; i < inventoryIds.length; i += LOTE_INV) {
+            const lote = inventoryIds.slice(i, i + LOTE_INV);
+            await Promise.all(lote.map(async (invId) => {
+                try {
+                    const { data } = await axios.get(`https://api.mercadolibre.com/inventories/${invId}/stock/fulfillment`, { headers });
+                    if (typeof data.total === 'number') estoqueFullPorInventory[invId] = data.total;
+                } catch { /* item sem estoque FULL detalhado, mantém fallback */ }
+            }));
+        }
+        escrever(`Estoque FULL obtido para ${Object.keys(estoqueFullPorInventory).length} de ${inventoryIds.length} inventories.`);
+
         // 5. Montar reposição
+        function ePar(titulo, sku) {
+            const t = (titulo || '').toLowerCase();
+            const s = (sku   || '').toLowerCase();
+            return s.includes('-par') || /\bpar\b/.test(t) || t.startsWith('par ');
+        }
+
+        // Retorna o primeiro atributo descritivo da variação (ex: "Direito", "Preto", "G")
+        function labelVariacao(v) {
+            for (const a of v.attributes || []) {
+                if (a.id !== 'SELLER_SKU' && a.value_name) return a.value_name;
+            }
+            return '';
+        }
+
+        // Compara títulos pelos primeiros 40 chars normalizados
+        function titulosSimilares(t1, t2) {
+            const n = t => (t || '').toLowerCase().replace(/\s+/g, ' ').trim().substring(0, 40);
+            return n(t1) === n(t2);
+        }
+
+        // Procura entrada existente em porSku com mesmo sku (principal ou alternativa ~) e título similar
+        function encontrarEntradaSimilar(porSku, sku, titulo) {
+            if (porSku[sku] && titulosSimilares(porSku[sku].titulo, titulo)) return sku;
+            const prefixo = sku + '~';
+            for (const key of Object.keys(porSku)) {
+                if (key.startsWith(prefixo) && titulosSimilares(porSku[key].titulo, titulo)) return key;
+            }
+            return null;
+        }
+
         const porSku = {};
         for (const itemId of anunciosIds) {
             const p = produtos[itemId];
             if (!p || p.error) continue;
 
-            let sku = '';
-            for (const attr of p.attributes || []) {
-                if (attr.id === 'SELLER_SKU') { sku = (attr.value_name || '').trim().toLowerCase(); break; }
-            }
-            if (!sku) sku = itemId.toLowerCase();
+            const status     = p.status || '';
+            const tituloBase = p.title  || '';
+            const variacoes  = p.variations || [];
 
-            const estoque = p.available_quantity || 0;
-            const status = p.status || '';
+            if (variacoes.length > 0) {
+                // Caminho 2: listagem com variações → uma entrada por variação
+                for (const v of variacoes) {
+                    let vSku = '';
+                    for (const a of v.attributes || []) {
+                        if (a.id === 'SELLER_SKU') { vSku = (a.value_name || '').trim().toLowerCase(); break; }
+                    }
 
-            if (!porSku[sku]) {
-                porSku[sku] = { item_id: itemId, sku, titulo: p.title || '', estoque, status };
+                    const label  = labelVariacao(v);
+                    const vTitulo = tituloBase + (label ? ' - ' + label : '');
+                    // Se não tem SELLER_SKU na variação, usa "itemid:variationId" como chave
+                    const vKey   = vSku || (itemId.toLowerCase() + ':' + v.id);
+                    // Estoque físico FULL (inclui unidades em transferência); cai para available_quantity se não achar
+                    const vEst   = (v.inventory_id && estoqueFullPorInventory[v.inventory_id] !== undefined)
+                        ? estoqueFullPorInventory[v.inventory_id]
+                        : (v.available_quantity || 0);
+                    // variation_id só armazenado quando não tem sku próprio (para cruzar com vendasPorVariacao)
+                    const vVarId = vSku ? undefined : v.id;
+
+                    if (!porSku[vKey]) {
+                        porSku[vKey] = { item_id: itemId, variation_id: vVarId, sku: vKey, titulo: vTitulo, estoque: vEst, status };
+                    } else {
+                        const jaAtivo   = porSku[vKey].status === 'active';
+                        const novoAtivo = status === 'active';
+                        if ((!jaAtivo && novoAtivo) || (novoAtivo && vEst > porSku[vKey].estoque)) {
+                            porSku[vKey] = { ...porSku[vKey], estoque: vEst, item_id: itemId, status };
+                        }
+                    }
+                }
             } else {
-                const jaAtivo = porSku[sku].status === 'active';
-                const novoAtivo = status === 'active';
-                if ((!jaAtivo && novoAtivo) || (novoAtivo && estoque > porSku[sku].estoque)) {
-                    porSku[sku] = { ...porSku[sku], estoque, item_id: itemId, status };
+                // Caminho 1: sem variações — lógica atual
+                let sku = '';
+                for (const attr of p.attributes || []) {
+                    if (attr.id === 'SELLER_SKU') { sku = (attr.value_name || '').trim().toLowerCase(); break; }
+                }
+                if (!sku) sku = itemId.toLowerCase();
+
+                // Estoque físico FULL (inclui unidades em transferência); cai para available_quantity se não achar
+                const estoque = (p.inventory_id && estoqueFullPorInventory[p.inventory_id] !== undefined)
+                    ? estoqueFullPorInventory[p.inventory_id]
+                    : (p.available_quantity || 0);
+
+                if (!porSku[sku]) {
+                    porSku[sku] = { item_id: itemId, sku, titulo: tituloBase, estoque, status };
+                } else {
+                    const novoEPar      = ePar(tituloBase, sku);
+                    const existenteEPar = ePar(porSku[sku].titulo, porSku[sku].sku);
+
+                    if (novoEPar !== existenteEPar) {
+                        // Par colidindo com individual → separa
+                        const skuPar = novoEPar ? sku + '#par' : porSku[sku].sku + '#par';
+                        if (novoEPar) {
+                            porSku[skuPar] = { item_id: itemId, sku: skuPar, titulo: tituloBase, estoque, status };
+                        } else {
+                            porSku[skuPar] = { ...porSku[sku], sku: skuPar };
+                            porSku[sku]    = { item_id: itemId, sku, titulo: tituloBase, estoque, status };
+                        }
+                        escrever(`[AVISO] SKU "${sku}" colide entre PAR e INDIVIDUAL — separados automaticamente`);
+                    } else {
+                        const entradaExistente = encontrarEntradaSimilar(porSku, sku, tituloBase);
+                        if (entradaExistente) {
+                            // Mesmo produto, listagem duplicada → mescla e rastreia item_ids extras
+                            const e = porSku[entradaExistente];
+                            if (!e._itemIds) e._itemIds = [e.item_id.toLowerCase()];
+                            e._itemIds.push(itemId.toLowerCase());
+                            const jaAtivo   = e.status === 'active';
+                            const novoAtivo = status === 'active';
+                            if ((!jaAtivo && novoAtivo) || (novoAtivo && estoque > e.estoque)) {
+                                porSku[entradaExistente] = { ...e, estoque, item_id: itemId, status };
+                            }
+                        } else {
+                            // Produto diferente com mesmo SKU → entrada alternativa com chave sku~itemId
+                            const skuAlt = sku + '~' + itemId.toLowerCase();
+                            porSku[skuAlt] = { item_id: itemId, sku: skuAlt, titulo: tituloBase, estoque, status };
+                            if (!porSku[sku]._itemIds) porSku[sku]._itemIds = [porSku[sku].item_id.toLowerCase()];
+                            escrever(`[AVISO] SKU "${sku}" usado em produtos diferentes: "${tituloBase.substring(0, 40)}"`);
+                        }
+                    }
                 }
             }
         }
 
         const reposicao = Object.values(porSku).map(d => {
-            const vendas30 = vendasPorSku[d.sku] || 0;
+            let vendas30      = 0;
+            let faturamento30 = 0;
+
+            if (d.sku.includes('~') || d._itemIds) {
+                // Entrada alternativa (produto diferente com mesmo SKU) ou com duplicatas
+                // → atribuir por item_id para cada listagem
+                const ids = d._itemIds || [d.item_id.toLowerCase()];
+                for (const id of ids) {
+                    vendas30      += vendasPorItemId[id] || 0;
+                    faturamento30 += faturPorItemId[id]  || 0;
+                }
+            } else {
+                // Entrada normal → usa seller_sku
+                vendas30      = vendasPorSku[d.sku]      || 0;
+                faturamento30 = faturamentoPorSku[d.sku] || 0;
+            }
+
+            // Fallback para variações sem SELLER_SKU
+            if (!vendas30 && d.variation_id) {
+                const vk = d.item_id.toLowerCase() + ':' + d.variation_id;
+                vendas30      = vendasPorVariacao[vk] || 0;
+                faturamento30 = faturPorVariacao[vk]  || 0;
+            }
+
+            faturamento30 = +faturamento30.toFixed(2);
             const mediaDia = +(vendas30 / 30).toFixed(2);
             const cobertura = d.estoque === 0 ? 0 : (mediaDia > 0 ? +(d.estoque / mediaDia).toFixed(1) : 999);
-            const rep = Math.max(0, Math.ceil(diasAlvo * mediaDia - d.estoque));
-            return { ...d, vendas30, mediaDia, cobertura, reposicao: rep };
+            // Buffer de dias de coleta só se aplica a anúncios ativos (vendendo agora).
+            // Anúncio pausado não corre risco de ruptura durante a coleta, então usa só o alvo base.
+            const diasTotal = d.status === 'active' ? (diasAlvo + diasColeta) : diasAlvo;
+            const rep = Math.max(0, Math.ceil(diasTotal * mediaDia - d.estoque));
+            const { _itemIds, ...rest } = d;   // não persistir metadata interna
+            // Limpar sufixo interno do SKU (ex: "013tb~mlb123" → "013tb")
+            const skuLimpo = rest.sku.includes('~') ? rest.sku.split('~')[0] : rest.sku;
+            return { ...rest, sku: skuLimpo, vendas30, faturamento30, mediaDia, cobertura, reposicao: rep };
         }).sort((a, b) => b.reposicao - a.reposicao);
 
         salvarJson('reposicao.json', reposicao);
@@ -225,8 +410,9 @@ router.get('/importar_custos', auth, (req, res) => {
     try {
         const config = JSON.parse(fs.readFileSync(path.join(STORAGE, 'config.json'), 'utf8'));
         const filePath = config.planilha_custos;
-        if (!filePath) return res.status(400).json({ erro: 'planilha_custos não configurada em config.json' });
-        if (!fs.existsSync(filePath)) return res.status(404).json({ erro: `Arquivo não encontrado: ${filePath}` });
+        const dica = 'Use o botão de enviar planilha para importar o arquivo .xlsx.';
+        if (!filePath) return res.status(400).json({ erro: `Nenhuma planilha fixa configurada. ${dica}` });
+        if (!fs.existsSync(filePath)) return res.status(404).json({ erro: `A planilha configurada não existe mais neste computador. ${dica}` });
 
         const XLSX = require('xlsx');
         const wb = XLSX.readFile(filePath);
@@ -336,11 +522,52 @@ router.get('/app_info', auth, (req, res) => {
 
 // ── Trocar de conta (lança outro app se offline) ─────────────────────────────
 router.post('/switch', auth, (req, res) => {
-    const { porta, exe } = req.body;
+    const { porta, exe, nome } = req.body;
     if (!porta) return res.status(400).json({ erro: 'porta obrigatória' });
 
-    const http = require('http');
+    const http   = require('http');
     const { spawn } = require('child_process');
+
+    // Resolve o caminho do exe. O nome exibido ("Flavia Stock") nem sempre é o
+    // productName da instalação ("Dashboard ML"), então além dos caminhos exatos
+    // procuramos uma pasta instalada que compartilhe uma palavra do nome.
+    const exePath = (() => {
+        if (exe && fs.existsSync(exe)) return exe;
+
+        const bases = [
+            process.env.LOCALAPPDATA && path.join(process.env.LOCALAPPDATA, 'Programs'),
+            process.env.PROGRAMFILES,
+            process.env['PROGRAMFILES(X86)'],
+        ].filter(Boolean);
+
+        const nomes = [req.body.exe_nome, nome].map(n => (n || '').trim()).filter(Boolean);
+
+        // 1) caminho exato <base>/<nome>/<nome>.exe
+        for (const base of bases) {
+            for (const n of nomes) {
+                const p = path.join(base, n, `${n}.exe`);
+                if (fs.existsSync(p)) return p;
+            }
+        }
+
+        // 2) pasta instalada que compartilhe uma palavra significativa do nome
+        const palavras = nomes.flatMap(n => n.split(/\s+/)).filter(p => p.length >= 4).map(p => p.toLowerCase());
+        if (!palavras.length) return null;
+
+        for (const base of bases) {
+            let dirs = [];
+            try {
+                dirs = fs.readdirSync(base, { withFileTypes: true }).filter(d => d.isDirectory()).map(d => d.name);
+            } catch { continue; }
+            for (const d of dirs) {
+                const dl = d.toLowerCase();
+                if (!palavras.some(p => dl.includes(p))) continue;
+                const p = path.join(base, d, `${d}.exe`);
+                if (fs.existsSync(p)) return p;
+            }
+        }
+        return null;
+    })();
 
     const checar = () => new Promise(ok => {
         const r = http.get(`http://127.0.0.1:${porta}/api/app_info`, (resp) => {
@@ -351,14 +578,15 @@ router.post('/switch', auth, (req, res) => {
     });
 
     checar().then(async (online) => {
-        if (!online && exe) {
-            spawn(exe, [], { detached: true, stdio: 'ignore' }).unref();
-            // Espera até 8s o outro app subir
+        if (!online && exePath) {
+            spawn(exePath, [], { detached: true, stdio: 'ignore' }).unref();
             for (let i = 0; i < 8; i++) {
                 await new Promise(r => setTimeout(r, 1000));
                 if (await checar()) break;
             }
         }
+        const ainda = await checar();
+        if (!ainda) return res.json({ ok: false, erro: 'Outro app não está aberto. Abra-o primeiro.' });
         res.json({ ok: true, porta });
     });
 });
