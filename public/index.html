@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard ML</title>
+    <title>Dashboard Cordeiro</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/boxicons@2.1.4/css/boxicons.min.css">
@@ -14,7 +14,7 @@
         body.page-ready { opacity:1; transform:translateY(0); }
         .cat-filter-btn { background:rgba(255,255,255,.06); border:1px solid var(--sep,rgba(255,255,255,.1)); border-radius:8px; color:var(--l2,#8ca0b3); font-size:12px; font-weight:600; padding:6px 14px; cursor:pointer; transition:all .18s; }
         .cat-filter-btn:hover { background:rgba(255,255,255,.12); color:var(--l1,#fff); }
-        .cat-filter-btn.cat-filter-ativo { background:#0a84ff; border-color:#0a84ff; color:#fff; }
+        .cat-filter-btn.cat-filter-ativo { background:var(--accent); border-color:var(--accent); color:#fff; }
 
         /* ── Filter sidebar ── */
         .content-with-filter { display:flex; gap:0; align-items:flex-start; }
@@ -27,9 +27,9 @@
         .filter-toggle-label { font-size:12px; color:var(--l2,#b0b8c4); cursor:pointer; display:flex; align-items:center; gap:6px; }
         .toggle-switch { position:relative; width:32px; height:18px; flex-shrink:0; }
         .toggle-switch input { opacity:0; width:0; height:0; }
-        .toggle-knob { position:absolute; inset:0; background:rgba(255,255,255,.15); border-radius:18px; cursor:pointer; transition:.2s; }
+        .toggle-knob { position:absolute; inset:0; background:var(--l4,rgba(0,0,0,.16)); border-radius:18px; cursor:pointer; transition:.2s; }
         .toggle-knob:before { content:''; position:absolute; width:12px; height:12px; left:3px; top:3px; background:#fff; border-radius:50%; transition:.2s; }
-        .toggle-switch input:checked + .toggle-knob { background:#0a84ff; }
+        .toggle-switch input:checked + .toggle-knob { background:var(--accent); }
         .toggle-switch input:checked + .toggle-knob:before { transform:translateX(14px); }
         .filter-select { width:100%; background:var(--s2,#1c1c1e); border:1px solid var(--sep,rgba(255,255,255,.1)); border-radius:8px; color:var(--l1,#fff); padding:8px 10px; font-size:12px; outline:none; cursor:pointer; }
         .filter-period-row { display:flex; align-items:center; gap:8px; font-size:12px; color:var(--l2,#b0b8c4); }
@@ -37,13 +37,13 @@
         .marca-list { display:flex; flex-direction:column; gap:4px; max-height:180px; overflow-y:auto; }
         .marca-item { display:flex; align-items:center; gap:8px; padding:4px 6px; border-radius:6px; cursor:pointer; font-size:12px; color:var(--l2,#b0b8c4); transition:background .15s; }
         .marca-item:hover { background:rgba(255,255,255,.06); }
-        .marca-item input { accent-color:#0a84ff; width:14px; height:14px; cursor:pointer; }
+        .marca-item input { accent-color:var(--accent); width:14px; height:14px; cursor:pointer; }
         .marca-item.selected { color:var(--l1,#fff); }
         .btn-filtro-toggle { display:inline-flex; align-items:center; gap:6px; padding:6px 14px; border-radius:8px; border:1px solid var(--sep,rgba(255,255,255,.1)); background:none; color:var(--l2,#b0b8c4); font-size:12px; font-weight:600; cursor:pointer; transition:all .18s; }
         .btn-filtro-toggle:hover, .btn-filtro-toggle.ativo { background:rgba(255,255,255,.08); color:var(--l1,#fff); }
-        .btn-filtro-toggle .badge-filtros { background:#0a84ff; color:#fff; border-radius:10px; padding:1px 6px; font-size:10px; margin-left:2px; }
+        .btn-filtro-toggle .badge-filtros { background:var(--accent); color:#fff; border-radius:10px; padding:1px 6px; font-size:10px; margin-left:2px; }
         .filter-divider { height:1px; background:var(--sep,rgba(255,255,255,.08)); margin:16px 0; }
-        .filter-clear { font-size:11px; color:#0a84ff; cursor:pointer; float:right; margin-top:-2px; }
+        .filter-clear { font-size:11px; color:var(--accent); cursor:pointer; float:right; margin-top:-2px; }
         .filter-clear:hover { text-decoration:underline; }
     </style>
 </head>
@@ -53,8 +53,8 @@
 <div class="aurora"><div class="aur-1"></div><div class="aur-2"></div><div class="aur-3"></div></div>
 
 <svg class="deco-art" viewBox="0 0 520 520" fill="none">
-  <circle cx="420" cy="80" r="180" stroke="rgba(10,132,255,0.06)" stroke-width="0.8"/>
-  <circle cx="420" cy="80" r="240" stroke="rgba(10,132,255,0.04)" stroke-width="0.6"/>
+  <circle cx="420" cy="80" r="180" stroke="rgba(26,158,63,0.07)" stroke-width="0.8"/>
+  <circle cx="420" cy="80" r="240" stroke="rgba(26,158,63,0.05)" stroke-width="0.6"/>
 </svg>
 
 <div class="d-flex">
@@ -113,8 +113,8 @@
                     <div><h2>Estratégia de Reposição</h2><span>Configuração do motor inteligente de cálculo</span></div>
                 </div>
                 <div class="engine-grid">
-                    <div class="field"><label>Dias até coleta ou reserva Full</label><input type="number" id="diasColeta" value="7"></div>
-                    <div class="field"><label>Dias de Estoque Alvo Full</label><input type="number" id="diasAlvo" value="44"></div>
+                    <div class="field"><label>Dias até coleta ou reserva Full</label><input type="number" id="diasColeta" value="17"></div>
+                    <div class="field"><label>Dias de Estoque Alvo Full</label><input type="number" id="diasAlvo" value="35"></div>
                     <div class="strategy-box"><div id="tipoEstratagia" class="estrategia-label">Equilibrada</div></div>
                 </div>
                 <div class="slider-area">
@@ -146,13 +146,21 @@
                     <table class="table align-middle mb-0 dashboard-table">
                         <thead>
                             <tr>
-                                <th>Urgência</th><th>Produto</th><th>SKU</th>
-                                <th>Estoque</th><th>Vendas 30d</th><th>Média Dia</th>
-                                <th>Cobertura</th><th>Reposição</th><th>Em Trânsito</th><th>Qtd Full</th>
+                                <th>Urgência <i class="bi bi-info-circle th-info-icon" data-tip="Nível de risco de ruptura, baseado na cobertura em dias"></i></th>
+                                <th>Produto</th>
+                                <th>SKU</th>
+                                <th>Estoque <i class="bi bi-info-circle th-info-icon" data-tip="Estoque físico total no FULL (inclui unidades em transferência)"></i></th>
+                                <th>Vendas 30d <i class="bi bi-info-circle th-info-icon" data-tip="Unidades vendidas nos últimos 30 dias, excluindo pedidos cancelados"></i></th>
+                                <th>Média Dia <i class="bi bi-info-circle th-info-icon" data-tip="Vendas 30d ÷ 30 = média de vendas por dia"></i></th>
+                                <th>Cobertura <i class="bi bi-info-circle th-info-icon" data-tip="Estoque ÷ Média Dia = quantos dias o estoque atual dura no ritmo de vendas"></i></th>
+                                <th>Estoque Alvo <i class="bi bi-info-circle th-info-icon" data-tip="ceil(Média Dia × Dias de Estoque Alvo) = estoque ideal para cobrir o período alvo, sem considerar coleta"></i></th>
+                                <th>Reposição <i class="bi bi-info-circle th-info-icon" data-tip="Quantidade a enviar hoje. Anúncios ativos somam o buffer de dias até coleta; pausados usam só o Estoque Alvo"></i></th>
+                                <th>Em Trânsito <i class="bi bi-info-circle th-info-icon" data-tip="Unidades já enviadas para o FULL mas ainda não recebidas"></i></th>
+                                <th>Qtd Full <i class="bi bi-info-circle th-info-icon" data-tip="Quantidade sugerida para enviar hoje ao FULL (editável)"></i></th>
                             </tr>
                         </thead>
                         <tbody id="tabelaReposicao">
-                            <tr><td colspan="10" class="text-center py-5 text-secondary">Carregando produtos...</td></tr>
+                            <tr><td colspan="11" class="text-center py-5 text-secondary">Carregando produtos...</td></tr>
                         </tbody>
                     </table>
                 </div>
