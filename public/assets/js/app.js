@@ -235,7 +235,7 @@ function renderPagina(lista, pagina) {
     tabela.innerHTML = fatia.map(p => `
         <tr data-sku="${p.sku}">
             <td>${badgeUrgencia(p.cobertura)}</td>
-            <td>${p.titulo}</td>
+            <td>${p.titulo}${p.curvaAbc ? ` <span class="badge-abc badge-abc-${p.curvaAbc.toLowerCase()}">${p.curvaAbc}</span>` : ''}</td>
             <td>${p.sku}</td>
             <td>${p.estoque}</td>
             <td>${p.vendas30}</td>
