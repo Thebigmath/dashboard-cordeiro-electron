@@ -126,15 +126,21 @@ router.post('/atualizar', auth, async (req, res) => {
         escrever('Carregando anúncios...');
         let anunciosIds = [];
         for (const status of ['', 'closed']) {
-            offset = 0; total = null;
+            // search_type=scan pagina por cursor (scroll_id) em vez de offset. O offset é
+            // rejeitado acima de 1000 ("Invalid limit and offset values", 400), o que
+            // travaria o motor por completo assim que o catálogo passasse de ~1050
+            // anúncios. O scan não tem esse teto.
+            let scrollId = null;
             do {
-                const params = { limit: LIMIT, offset };
-                if (status) params.status = status;
+                const params = { search_type: 'scan', limit: 100 };
+                if (status)   params.status    = status;
+                if (scrollId) params.scroll_id = scrollId;
                 const { data } = await axios.get(`https://api.mercadolibre.com/users/${user_id}/items/search`, { headers, params });
-                if (total === null) total = data.paging?.total || 0;
-                anunciosIds = anunciosIds.concat(data.results || []);
-                offset += LIMIT;
-            } while (offset < total);
+                const res = data.results || [];
+                if (!res.length) break;
+                anunciosIds = anunciosIds.concat(res);
+                scrollId = data.scroll_id;
+            } while (scrollId);
         }
         anunciosIds = [...new Set(anunciosIds)];
         escrever(`Anúncios: ${anunciosIds.length}`);
@@ -360,9 +366,9 @@ router.post('/atualizar', auth, async (req, res) => {
             const vdm = vendas30 / 30;
             const mediaDia = +vdm.toFixed(2);   // só para exibição
             const cobertura = d.estoque === 0 ? 0 : (mediaDia > 0 ? +(d.estoque / mediaDia).toFixed(1) : 999);
-            // Buffer de dias de coleta só se aplica a anúncios ativos (vendendo agora).
-            // Anúncio pausado não corre risco de ruptura durante a coleta, então usa só o alvo base.
-            const diasTotal = d.status === 'active' ? (diasAlvo + diasColeta) : diasAlvo;
+            // Dias de venda até a mercadoria chegar. Só vale para anúncio ativo: pausado
+            // não vende durante a espera, então não consome estoque nesse período.
+            const diasAteChegar = d.status === 'active' ? diasColeta : 0;
             // estoque alvo − estoque projetado no fim da coleta, com o que está a
             // caminho contando como disponível
             // o trânsito é indexado pelo SKU do envio, sem o sufixo interno da chave
@@ -378,7 +384,12 @@ router.post('/atualizar', auth, async (req, res) => {
             if (transitoLocal > 0 && jaContadoNoEstoque > 0) {
                 duplicidadesEvitadas.push({ sku: skuBase, transitoLocal, jaContadoNoEstoque, usado: emTransito });
             }
-            const rep = Math.max(0, Math.ceil(vdm * diasTotal - d.estoque - emTransito));
+            // Só sobra do estoque atual o que não for vendido durante a espera — e ele não
+            // pode ficar negativo. A conta antiga (vdm × (alvo+coleta) − estoque) creditava
+            // consumo de estoque que não existe, e inflava a compra em quem está com pouco
+            // estoque.
+            const estoqueNaChegada = Math.max(0, d.estoque - vdm * diasAteChegar);
+            const rep = Math.max(0, Math.ceil(vdm * diasAlvo - estoqueNaChegada - emTransito));
             const { _itemIds, ...rest } = d;   // não persistir metadata interna
             // "sku" é só rótulo e pode repetir entre produtos diferentes. "chave" é o
             // identificador único — sem ela o frontend reagrupa e soma vendas de itens distintos.
