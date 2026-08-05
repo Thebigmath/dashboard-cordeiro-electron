@@ -12,6 +12,65 @@ const btnRecalcular     = document.getElementById('btnRecalcular');
 const btnGerarPlanilha  = document.getElementById('btnGerarPlanilhaFull');
 const btnEnviarFull     = document.getElementById('btnEnviarFull');
 
+/* ── Gráfico Faturamento Mensal ─────────────────────────────────────────── */
+async function renderizarGraficoFaturamento() {
+    const el = document.getElementById('grafico-faturamento');
+    if (!el) return;
+    el.innerHTML = `<div style="text-align:center;color:var(--l3);font-size:12px;padding:20px 0">Carregando...</div>`;
+    try {
+        const r = await fetch('/api/faturamento_mensal');
+        const dados = await r.json();
+        if (!Array.isArray(dados) || !dados.length) throw new Error();
+        const max = Math.max(...dados.map(d => d.valor), 1);
+        const fmt = v => 'R$ ' + v.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+        const W = 240, H = 120, PAD_L = 8, PAD_B = 22, barW = Math.floor((W - PAD_L) / dados.length) - 4;
+        const barH = (v) => Math.max(2, ((v / max) * (H - PAD_B - 8)));
+        const barX = (i) => PAD_L + i * ((W - PAD_L) / dados.length) + 2;
+        const bars = dados.map((d, i) => {
+            const h = barH(d.valor);
+            const x = barX(i);
+            const y = H - PAD_B - h;
+            const mesAtual = i === dados.length - 1;
+            return `
+                <rect class="fat-bar" x="${x}" y="${y}" width="${barW}" height="${h}" rx="3"
+                    data-mes="${d.mes}" data-valor="${fmt(d.valor)}" data-atual="${mesAtual}"
+                    fill="${mesAtual ? '#1a9e3f' : 'rgba(26,158,63,0.35)'}"
+                    style="cursor:pointer;transition:fill .15s"/>
+                <text x="${x + barW/2}" y="${H - 6}" text-anchor="middle"
+                    font-size="9" fill="var(--l3)" style="pointer-events:none">${d.mes}</text>`;
+        }).join('');
+        const total = dados.reduce((s, d) => s + d.valor, 0);
+        el.innerHTML = `
+            <div style="font-size:18px;font-weight:700;color:var(--l1);margin-bottom:4px">${fmt(total)}</div>
+            <div style="font-size:11px;color:var(--l3);margin-bottom:10px">últimos 6 meses</div>
+            <div style="position:relative">
+                <div id="fat-tooltip" style="display:none;position:absolute;background:var(--s1);border:1px solid var(--sep);border-radius:8px;padding:6px 10px;font-size:12px;pointer-events:none;white-space:nowrap;z-index:10;box-shadow:0 4px 16px rgba(0,0,0,.4)"></div>
+                <svg viewBox="0 0 ${W} ${H}" width="100%" height="${H}" style="overflow:visible">${bars}</svg>
+            </div>`;
+        const tooltip = el.querySelector('#fat-tooltip');
+        el.querySelectorAll('.fat-bar').forEach(rect => {
+            rect.addEventListener('mouseenter', () => {
+                tooltip.innerHTML = `<span style="color:var(--l3)">${rect.dataset.mes}&nbsp;</span><strong style="color:var(--l1)">${rect.dataset.valor}</strong>`;
+                tooltip.style.display = 'block';
+                rect.style.fill = '#1a9e3f';
+            });
+            rect.addEventListener('mousemove', (e) => {
+                const box = el.getBoundingClientRect();
+                let left = e.clientX - box.left + 12;
+                if (left + 180 > box.width) left = e.clientX - box.left - 190;
+                tooltip.style.left = left + 'px';
+                tooltip.style.top  = (e.clientY - box.top - 40) + 'px';
+            });
+            rect.addEventListener('mouseleave', () => {
+                tooltip.style.display = 'none';
+                rect.style.fill = rect.dataset.atual === 'true' ? '#1a9e3f' : 'rgba(26,158,63,0.35)';
+            });
+        });
+    } catch {
+        el.innerHTML = `<div style="text-align:center;color:var(--l3);font-size:12px;padding:20px 0">Sem dados de faturamento</div>`;
+    }
+}
+
 /* ── Estado ─────────────────────────────────────────────────────────────── */
 const POR_PAGINA = 100;
 let paginaAtual       = 1;
@@ -20,6 +79,12 @@ let filtroCategoria   = 'todos';
 let textoPesquisa     = '';
 window.produtosReposicao = [];
 window.qtdsFull   = {};
+// Seleção por "chave" (identificador único), não pelo SKU: assim ela sobrevive
+// à paginação, aos filtros e a SKUs repetidos entre produtos diferentes.
+window.selecionados = new Set();
+let apenasSelecionados = false;
+
+const chaveDe = p => p.chave || p.sku;
 
 // Fórmula alternativa testada (2026-08-05): alvo - estoque - trânsito
 // Resultado: ~7.8% de match com Magiic — descartada.
@@ -113,7 +178,8 @@ function aplicarFiltros() {
     let lista = window.produtosReposicao.map(p => {
         if (periodo !== 30) {
             const mediaDia = p.vendas30 / periodo;
-            const cobertura = mediaDia > 0 ? parseFloat((Number(p.estoque) / mediaDia).toFixed(1)) : 999;
+            const coberto  = Number(p.estoque) + Number(window.transitoMap[p.sku] || 0);
+            const cobertura = coberto === 0 ? 0 : (mediaDia > 0 ? parseFloat((coberto / mediaDia).toFixed(1)) : 999);
             return { ...p, mediaDia: Math.round(mediaDia * 100) / 100, cobertura };
         }
         return p;
@@ -141,6 +207,7 @@ function aplicarFiltros() {
     if (fComTransito) lista = lista.filter(p => Number(window.transitoMap[p.sku] || 0) > 0);
     if (fSemTransito) lista = lista.filter(p => Number(window.transitoMap[p.sku] || 0) === 0);
     if (fComEstoque)  lista = lista.filter(p => Number(p.estoque) > 0);
+    if (apenasSelecionados) lista = lista.filter(p => window.selecionados.has(chaveDe(p)));
 
     const PRIORIDADE = ['tapete','lanterna','calota'];
     lista.sort((a, b) => {
@@ -227,8 +294,10 @@ if (slider && diasAlvo && estrategia) {
 }
 
 /* ── Badge urgência ─────────────────────────────────────────────────────── */
-function badgeUrgencia(cobertura) {
-    const c = Number(cobertura);
+function badgeUrgencia(p) {
+    const c = Number(typeof p === 'object' && p !== null ? p.cobertura : p);
+    const vendeu = typeof p === 'object' && p !== null ? Number(p.vendas30) > 0 : true;
+    if (c === 0 && !vendeu) return '<span class="urgencia-badge sem-venda">PARADO</span>';
     if (c === 0)  return '<span class="urgencia-badge critico">SEM ESTOQUE</span>';
     if (c >= 999) return '<span class="urgencia-badge sem-venda">SEM VENDA</span>';
     if (c < 7)    return '<span class="urgencia-badge critico">CRÍTICO</span>';
@@ -246,20 +315,22 @@ function renderPagina(lista, pagina) {
     const inputStyle = 'width:70px;background:var(--s2,#1c1c1e);border:1px solid var(--sep2,#3a3a3c);border-radius:6px;color:var(--l1,#fff);padding:3px 6px;font-size:12px;text-align:center;outline:none;';
 
     tabela.innerHTML = fatia.map(p => `
-        <tr data-sku="${p.sku}">
-            <td>${badgeUrgencia(p.cobertura)}</td>
+        <tr data-sku="${p.sku}" data-chave="${chaveDe(p)}"${window.selecionados.has(chaveDe(p)) ? ' class="linha-sel"' : ''}>
+            <td class="col-sel"><input type="checkbox" class="sel-check sel-linha" data-chave="${chaveDe(p)}"${window.selecionados.has(chaveDe(p)) ? ' checked' : ''}></td>
+            <td>${badgeUrgencia(p)}</td>
             <td>${p.titulo}${p.curvaAbc ? ` <span class="badge-abc badge-abc-${p.curvaAbc.toLowerCase()}">${p.curvaAbc}</span>` : ''}</td>
             <td>${p.sku}</td>
-            <td>${p.estoque}</td>
+            <td>${Number(p.estoque)}</td>
             <td>${p.vendas30}</td>
             <td>${p.mediaDia}</td>
-            <td>${p.cobertura}</td>
-            <td><strong>${p.reposicao}</strong></td>
+            <td>${Number(p.cobertura) >= 999 ? '—' : p.cobertura}</td>
+            <td><strong>${Number(p.reposicao) > 0 ? p.reposicao : '—'}</strong></td>
             <td><span class="qtd-transito-display" style="display:inline-block;min-width:40px;text-align:center;font-weight:600;color:${(window.transitoMap[p.sku]||0)>0?'#f39c12':'var(--l3,#8ca0b3)'}">${window.transitoMap[p.sku] || 0}</span></td>
-            <td><input type="number" class="qtd-full" data-item-id="${p.item_id || ''}" min="0" placeholder="0" value="${window.qtdsFull[p.item_id] ?? (qtdFullSugerida(p) > 0 ? qtdFullSugerida(p) : '')}" style="${inputStyle}" oninput="window.qtdsFull[this.dataset.itemId]=parseInt(this.value)||0"></td>
+            <td><input type="number" class="qtd-full" data-chave="${chaveDe(p)}" data-item-id="${p.item_id || ''}" min="0" placeholder="0" value="${window.qtdsFull[chaveDe(p)] ?? (qtdFullSugerida(p) > 0 ? qtdFullSugerida(p) : '')}" style="${inputStyle}" oninput="window.qtdsFull[this.dataset.chave]=parseInt(this.value)||0"></td>
         </tr>`).join('');
 
     renderControles(lista.length, pagina);
+    sincronizarSelecaoUI();
 }
 
 function renderControles(total, pagina) {
@@ -294,6 +365,44 @@ window.irPagina = function(p) {
     document.getElementById('paginacaoReposicaoTopo')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 };
 
+/* ── Seleção de produtos ────────────────────────────────────────────────── */
+function sincronizarSelecaoUI() {
+    const n = window.selecionados.size;
+    const visiveis = [...document.querySelectorAll('.sel-linha')];
+    const master   = document.getElementById('selTodos');
+    if (master) {
+        const marcados = visiveis.filter(c => c.checked).length;
+        master.checked       = visiveis.length > 0 && marcados === visiveis.length;
+        master.indeterminate = marcados > 0 && marcados < visiveis.length;
+    }
+    let painel = document.getElementById('painel-selecao');
+    if (!n) { painel?.remove(); return; }
+    if (!painel) {
+        painel = document.createElement('div');
+        painel.id = 'painel-selecao';
+        document.body.appendChild(painel);
+        painel.addEventListener('click', e => {
+            const acao = e.target.closest('[data-acao]')?.dataset.acao;
+            if (acao === 'filtrar') { apenasSelecionados = !apenasSelecionados; paginaAtual = 1; aplicarFiltros(); }
+            if (acao === 'limpar')  { window.selecionados.clear(); apenasSelecionados = false; paginaAtual = 1; aplicarFiltros(); }
+            if (acao === 'planilha') document.getElementById('btnGerarPlanilhaFull')?.click();
+        });
+    }
+    const porChave = {};
+    window.produtosReposicao.forEach(p => { porChave[chaveDe(p)] = p; });
+    let unidades = 0;
+    window.selecionados.forEach(c => {
+        const p = porChave[c];
+        if (p) unidades += Number(window.qtdsFull[c] ?? qtdFullSugerida(p)) || 0;
+    });
+    painel.innerHTML = `
+        <div class="ps-topo"><i class="bi bi-check2-square"></i> ${n} produto${n > 1 ? 's' : ''} selecionado${n > 1 ? 's' : ''}</div>
+        <div class="ps-num"><strong>${unidades}</strong><span>unidades a enviar</span></div>
+        <button class="ps-btn ps-primario" data-acao="filtrar"><i class="bi bi-funnel"></i> ${apenasSelecionados ? 'Mostrar todos' : 'Mostrar apenas selecionados'}</button>
+        <button class="ps-btn" data-acao="planilha"><i class="bi bi-file-earmark-arrow-down"></i> Gerar planilha dos selecionados</button>
+        <button class="ps-btn ps-limpar" data-acao="limpar"><i class="bi bi-x-circle"></i> Limpar seleção</button>`;
+}
+
 /* ── Carregar JSON ──────────────────────────────────────────────────────── */
 function carregarProdutos() {
     // deduplica por SKU somando estoque e vendas30
@@ -327,6 +436,7 @@ function carregarProdutos() {
             });
             const produtos = Object.values(mapa);
             window.produtosReposicao = produtos;
+            renderizarGraficoFaturamento();
             construirListaMarcas();
             aplicarFiltros();
         })
@@ -404,7 +514,10 @@ if (btnRecalcular) {
             const vendas30 = Number(p.vendas30);
             const transito = Number(window.transitoMap[p.sku] || 0);
             const vdm      = Math.round((vendas30 / 30) * 100) / 100;
-            const cobertura = vdm > 0 ? parseFloat((estoque / vdm).toFixed(1)) : 999;
+            // cobertura conta o trânsito e usa a média em precisão total — igual ao backend
+            const vdmReal   = vendas30 / 30;
+            const coberto   = estoque + transito;
+            const cobertura = coberto === 0 ? 0 : (vdmReal > 0 ? parseFloat((coberto / vdmReal).toFixed(1)) : 999);
             const reposicao = calcularReposicaoMagis5(vendas30, diasC, diasA, estoque, transito, 1, p.status === 'active');
             return { ...p, mediaDia: vdm, cobertura, reposicao };
         });
@@ -447,24 +560,57 @@ if (btnAtualizar) {
     });
 }
 
+/* ── Seleção: checkboxes de linha e selecionar-todos ───────────────────── */
+if (tabela) {
+    tabela.addEventListener('change', e => {
+        const cb = e.target.closest('.sel-linha');
+        if (!cb) return;
+        const chave = cb.dataset.chave;
+        if (cb.checked) window.selecionados.add(chave);
+        else            window.selecionados.delete(chave);
+        const tr = cb.closest('tr');
+        if (tr) tr.classList.toggle('linha-sel', cb.checked);
+        sincronizarSelecaoUI();
+    });
+}
+const selTodosEl = document.getElementById('selTodos');
+if (selTodosEl) {
+    selTodosEl.addEventListener('change', () => {
+        document.querySelectorAll('.sel-linha').forEach(cb => {
+            cb.checked = selTodosEl.checked;
+            const chave = cb.dataset.chave;
+            if (selTodosEl.checked) window.selecionados.add(chave);
+            else                    window.selecionados.delete(chave);
+            const tr = cb.closest('tr');
+            if (tr) tr.classList.toggle('linha-sel', selTodosEl.checked);
+        });
+        sincronizarSelecaoUI();
+    });
+}
+
 /* ── Gerar planilha Full ────────────────────────────────────────────────── */
 if (btnGerarPlanilha) {
     btnGerarPlanilha.addEventListener('click', async function () {
-        // salva inputs visiveis antes de exportar
         document.querySelectorAll('.qtd-full').forEach(input => {
-            const id  = input.dataset.itemId;
+            const c   = input.dataset.chave;
             const qty = parseInt(input.value) || 0;
-            if (id) window.qtdsFull[id] = qty;
+            if (c) window.qtdsFull[c] = qty;
         });
 
-        const produtosExportar = Object.entries(window.qtdsFull)
-            .filter(([, qty]) => qty > 0)
-            .map(([item_id, qtdFull]) => {
-                const produto = window.produtosReposicao.find(p => p.item_id === item_id);
-                return { item_id, qtdFull, sku: produto?.sku || '' };
-            });
+        const temSelecao = window.selecionados.size > 0;
+        const produtosExportar = window.produtosReposicao
+            .filter(p => !temSelecao || window.selecionados.has(chaveDe(p)))
+            .map(p => {
+                const c = chaveDe(p);
+                const qtd = window.qtdsFull[c] ?? qtdFullSugerida(p);
+                return { chave: c, item_id: p.item_id, sku: p.sku, qtdFull: Number(qtd) || 0 };
+            })
+            .filter(p => p.qtdFull > 0);
 
-        if (!produtosExportar.length) { alert('Nenhum produto com quantidade informada.'); return; }
+        if (!produtosExportar.length) {
+            alert(temSelecao ? 'Nenhum dos produtos selecionados tem quantidade a enviar.' : 'Nenhum produto com quantidade informada.');
+            return;
+        }
 
         try {
             const resp = await fetch('/api/gerar_planilha', {

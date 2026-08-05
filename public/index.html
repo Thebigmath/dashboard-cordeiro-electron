@@ -106,21 +106,32 @@
         <div class="content-with-filter">
         <div class="main-col" style="padding:24px">
 
-            <!-- MOTOR -->
-            <div class="reposicao-engine">
-                <div class="engine-header">
-                    <div class="engine-icon"><i class="bx bx-line-chart"></i></div>
-                    <div><h2>Estratégia de Reposição</h2><span>Configuração do motor inteligente de cálculo</span></div>
+            <!-- MOTOR + GRÁFICO -->
+            <div style="display:flex;gap:16px;margin-bottom:14px">
+                <div class="reposicao-engine" style="flex:1;margin-bottom:0">
+                    <div class="engine-header">
+                        <div class="engine-icon"><i class="bx bx-line-chart"></i></div>
+                        <div><h2>Estratégia de Reposição</h2><span>Configuração do motor inteligente de cálculo</span></div>
+                    </div>
+                    <div class="engine-grid">
+                        <div class="field"><label>Dias até coleta ou reserva Full</label><input type="number" id="diasColeta" value="20"></div>
+                        <div class="field"><label>Dias de Estoque Alvo Full</label><input type="number" id="diasAlvo" value="35"></div>
+                        <div class="strategy-box"><div id="tipoEstratagia" class="estrategia-label">Equilibrada</div></div>
+                    </div>
+                    <div class="slider-area">
+                        <input type="range" min="15" max="70" value="35" id="sliderReposicao">
+                    </div>
+                    <button id="btnRecalcular"><i class="bx bx-refresh"></i> Recalcular Estratégia</button>
                 </div>
-                <div class="engine-grid">
-                    <div class="field"><label>Dias até coleta ou reserva Full</label><input type="number" id="diasColeta" value="17"></div>
-                    <div class="field"><label>Dias de Estoque Alvo Full</label><input type="number" id="diasAlvo" value="35"></div>
-                    <div class="strategy-box"><div id="tipoEstratagia" class="estrategia-label">Equilibrada</div></div>
+                <div class="reposicao-engine" style="width:300px;min-width:300px;margin-bottom:0">
+                    <div class="engine-header" style="padding-bottom:12px">
+                        <div class="engine-icon"><i class="bx bx-bar-chart-alt-2"></i></div>
+                        <div><h2>Faturamento Mensal</h2><span>Últimos 6 meses</span></div>
+                    </div>
+                    <div id="grafico-faturamento">
+                        <div style="text-align:center;color:var(--l3);font-size:12px;padding:20px 0">Carregando...</div>
+                    </div>
                 </div>
-                <div class="slider-area">
-                    <input type="range" min="15" max="70" value="35" id="sliderReposicao">
-                </div>
-                <button id="btnRecalcular"><i class="bx bx-refresh"></i> Recalcular Estratégia</button>
             </div>
 
             <!-- TABELA -->
@@ -146,6 +157,7 @@
                     <table class="table align-middle mb-0 dashboard-table">
                         <thead>
                             <tr>
+                                <th class="col-sel"><input type="checkbox" id="selTodos" class="sel-check" title="Selecionar todos os visíveis"></th>
                                 <th>Urgência <i class="bi bi-info-circle th-info-icon" data-tip="Nível de risco de ruptura, baseado na cobertura em dias"></i></th>
                                 <th>Produto</th>
                                 <th>SKU</th>
