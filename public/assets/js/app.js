@@ -20,6 +20,19 @@ let filtroCategoria   = 'todos';
 let textoPesquisa     = '';
 window.produtosReposicao = [];
 window.qtdsFull   = {};
+
+// Fórmula alternativa testada (2026-08-05): alvo - estoque - trânsito
+// Resultado: ~7.8% de match com Magiic — descartada.
+// function qtdFullSugerida(p) {
+//     const dias  = parseInt(document.getElementById('diasAlvo')?.value) || 35;
+//     const media = Number(p.mediaDia) || (Number(p.vendas30) || 0) / 30;
+//     const alvo  = Math.round(dias * media);
+//     return Math.max(0, alvo - Number(p.estoque) - (window.transitoMap[p.sku] || 0));
+// }
+// Usa reposição calculada pelo servidor (~93% de match com Magiic com dc=20).
+function qtdFullSugerida(p) {
+    return Number(p.reposicao) || 0;
+}
 window.transitoMap = {};
 window.custosMap   = {};
 
@@ -243,7 +256,7 @@ function renderPagina(lista, pagina) {
             <td>${p.cobertura}</td>
             <td><strong>${p.reposicao}</strong></td>
             <td><span class="qtd-transito-display" style="display:inline-block;min-width:40px;text-align:center;font-weight:600;color:${(window.transitoMap[p.sku]||0)>0?'#f39c12':'var(--l3,#8ca0b3)'}">${window.transitoMap[p.sku] || 0}</span></td>
-            <td><input type="number" class="qtd-full" data-item-id="${p.item_id || ''}" min="0" placeholder="0" value="${window.qtdsFull[p.item_id] ?? (p.reposicao > 0 ? p.reposicao : '')}" style="${inputStyle}" oninput="window.qtdsFull[this.dataset.itemId]=parseInt(this.value)||0"></td>
+            <td><input type="number" class="qtd-full" data-item-id="${p.item_id || ''}" min="0" placeholder="0" value="${window.qtdsFull[p.item_id] ?? (qtdFullSugerida(p) > 0 ? qtdFullSugerida(p) : '')}" style="${inputStyle}" oninput="window.qtdsFull[this.dataset.itemId]=parseInt(this.value)||0"></td>
         </tr>`).join('');
 
     renderControles(lista.length, pagina);
