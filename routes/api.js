@@ -326,9 +326,13 @@ router.post('/atualizar', auth, async (req, res) => {
         // Contam como estoque a caminho e abatem a reposição.
         const transitoPorSku = { ...lerJson('transito_local.json', {}) };
         for (const e of lerJson('envios_full.json', [])) {
-            if (e.inativo || !e.skus) continue;
+            if (e.inativo === true || e.ativo === false) continue;
             if ((e.recebido || 0) >= (e.unidades || 0) && (e.unidades || 0) > 0) continue;
-            for (const [s, qty] of Object.entries(e.skus)) {
+            // suporta formato novo {skus:{sku:qty}} e formato legado {produtos:[{sku,quantidade}]}
+            const entradas = e.skus
+                ? Object.entries(e.skus)
+                : (e.produtos || []).map(p => [p.sku, p.quantidade]);
+            for (const [s, qty] of entradas) {
                 const k = s.toLowerCase();
                 transitoPorSku[k] = (transitoPorSku[k] || 0) + qty;
             }
