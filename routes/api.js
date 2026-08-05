@@ -339,7 +339,9 @@ router.post('/atualizar', auth, async (req, res) => {
             let vendas30      = 0;
             let faturamento30 = 0;
 
-            if (d.sku.includes('~') || d._itemIds) {
+            const ehColisao = d.sku.includes('~') || d._itemIds ||
+                Object.keys(porSku).some(k => k !== d.sku && k.startsWith(d.sku + '~'));
+            if (ehColisao) {
                 // Entrada alternativa (produto diferente com mesmo SKU) ou com duplicatas
                 // → atribuir por item_id para cada listagem
                 const ids = d._itemIds || [d.item_id.toLowerCase()];
@@ -394,7 +396,21 @@ router.post('/atualizar', auth, async (req, res) => {
             // "sku" é só rótulo e pode repetir entre produtos diferentes. "chave" é o
             // identificador único — sem ela o frontend reagrupa e soma vendas de itens distintos.
             const chave = rest.sku;
-            const skuLimpo = chave.includes('~') ? chave.split('~')[0] : chave;
+            let skuLimpo = chave.includes('~') ? chave.split('~')[0] : chave;
+            const temColisao = chave.includes('~') ||
+                Object.keys(porSku).some(k => k !== chave && k.startsWith(skuLimpo + '~'));
+            if (temColisao) {
+                const titulo = (rest.titulo || '').toLowerCase();
+                const base   = skuLimpo.toLowerCase();
+                const stop   = new Set(['kit','tapete','bandeja','vw','volkswagen','fiat','gm','chevrolet',
+                                        'ford','jeep','ram','toyota','honda','hyundai','nissan','renault',
+                                        'para','com','pcs','pçs','premium','original','novo','nova','de',
+                                        'do','da','pça','peça','jogo','carro','veículo','veiculos',
+                                        'anos','ano','modelo','versao','versão','line','set']);
+                const extra  = titulo.split(/[\s\-\/\\()+]+/)
+                    .find(w => w.length >= 3 && !/^\d/.test(w) && !stop.has(w) && !base.includes(w));
+                if (extra) skuLimpo = skuLimpo + '-' + extra;
+            }
             return { ...rest, sku: skuLimpo, chave, vendas30, faturamento30, mediaDia, cobertura, reposicao: rep };
         }).sort((a, b) => b.reposicao - a.reposicao);
 
