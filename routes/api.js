@@ -634,10 +634,12 @@ router.get('/app_info', auth, (req, res) => {
     const pkg    = require('../package.json');
     const config = lerJson('config.json', {});
     res.json({
-        nome:      config.app_nome  || pkg.productName || pkg.name,
-        porta:     config.app_porta || 3002,
-        versao:    pkg.version,
-        outro_app: config.outro_app || null,
+        nome:        config.app_nome    || pkg.productName || pkg.name,
+        porta:       config.app_porta   || 3002,
+        versao:      pkg.version,
+        outro_app:   config.outro_app   || null,
+        dias_coleta: config.dias_coleta || 20,
+        dias_alvo:   config.dias_alvo   || 35,
     });
 });
 

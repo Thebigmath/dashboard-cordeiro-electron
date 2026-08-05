@@ -336,12 +336,29 @@ function carregarProdutos() {
 }
 
 if (tabela) {
-    // Carrega trânsito automático (de envios Full) antes de renderizar a tabela
-    fetch('/api/transito')
+    // Carrega config e trânsito antes de renderizar
+    fetch('/api/app_info')
         .then(r => r.json())
-        .then(dados => { window.transitoMap = dados || {}; })
-        .catch(() => { window.transitoMap = {}; })
-        .finally(() => carregarProdutos());
+        .then(info => {
+            if (info.dias_coleta) {
+                const el = document.getElementById('diasColeta');
+                if (el) el.value = info.dias_coleta;
+            }
+            if (info.dias_alvo) {
+                const el = document.getElementById('diasAlvo');
+                if (el) el.value = info.dias_alvo;
+                const slider = document.getElementById('sliderReposicao');
+                if (slider) slider.value = info.dias_alvo;
+            }
+        })
+        .catch(() => {})
+        .finally(() => {
+            fetch('/api/transito')
+                .then(r => r.json())
+                .then(dados => { window.transitoMap = dados || {}; })
+                .catch(() => { window.transitoMap = {}; })
+                .finally(() => carregarProdutos());
+        });
 }
 
 /* ── Pesquisa ───────────────────────────────────────────────────────────── */
