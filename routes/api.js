@@ -28,6 +28,20 @@ router.get('/dados', auth, (req, res) => {
     const ultima    = fs.existsSync(path.join(STORAGE, 'ultima_atualizacao.txt'))
         ? fs.readFileSync(path.join(STORAGE, 'ultima_atualizacao.txt'), 'utf8') : null;
 
+    // Soma SKUs dos envios Full ativos que ainda não foram totalmente recebidos
+    const envios = lerJson('envios_full.json', []);
+    for (const e of envios) {
+        if (e.inativo === true || e.ativo === false) continue;
+        if ((e.recebido || 0) >= (e.unidades || 0) && (e.unidades || 0) > 0) continue;
+        const entradas = e.skus
+            ? Object.entries(e.skus)
+            : (e.produtos || []).map(p => [p.sku, p.quantidade]);
+        for (const [sku, qty] of entradas) {
+            const k = sku.toLowerCase();
+            transito[k] = (transito[k] || 0) + qty;
+        }
+    }
+
     // Mesmo desconto que o motor aplica: unidades que o ML já recebeu e move entre
     // galpões já estão dentro de "estoque". Sem tirá-las daqui, o botão Recalcular e
     // o estoque exibido voltariam a contar a mesma unidade duas vezes.
@@ -61,7 +75,34 @@ router.post('/atualizar', auth, async (req, res) => {
         const LIMIT = 50;
         const config   = lerJson('config.json', {});
         const diasAlvo  = config.dias_alvo   || 35;
-        const diasColeta = config.dias_coleta || 17;
+        const diasColeta = config.dias_coleta || 20;
+
+        // 0. Auto-verificar envios Full já recebidos pelo ML
+        const enviosList = lerJson('envios_full.json', []);
+        let enviosAlterados = false;
+        for (const envio of enviosList) {
+            if (envio.inativo === true || envio.ativo === false) continue;
+            if (!envio.numero) continue;
+            if ((envio.recebido || 0) >= (envio.unidades || 0) && (envio.unidades || 0) > 0) continue;
+            try {
+                const { data: ship } = await axios.get(
+                    `https://api.mercadolibre.com/shipments/${envio.numero}`,
+                    { headers }
+                );
+                if (['delivered', 'closed'].includes(ship.status)) {
+                    const qtd = ship.received_quantity ?? envio.unidades;
+                    escrever(`[ENVIO] #${envio.numero} recebido pelo ML (status=${ship.status}, ${qtd} un) → fechado automaticamente`);
+                    envio.recebido = qtd;
+                    envio.status   = ship.status;
+                    enviosAlterados = true;
+                } else {
+                    escrever(`[ENVIO] #${envio.numero} ainda em trânsito (status=${ship.status})`);
+                }
+            } catch (e) {
+                escrever(`[ENVIO] #${envio.numero} não verificável via API (${(e.message || '').substring(0, 60)})`);
+            }
+        }
+        if (enviosAlterados) salvarJson('envios_full.json', enviosList);
 
         // 1. Pedidos últimos 30 dias (excluindo apenas cancelados)
         const dataInicio = new Date(Date.now() - 30 * 86400000).toISOString();
@@ -256,14 +297,22 @@ router.post('/atualizar', auth, async (req, res) => {
                     const vTransf = (v.inventory_id && transferenciaPorInventory[v.inventory_id]) || 0;
                     // variation_id só armazenado quando não tem sku próprio (para cruzar com vendasPorVariacao)
                     const vVarId = vSku ? undefined : v.id;
+                    // Só é FULL quem tem inventory_id. Sem ele, "estoque" é a quantidade
+                    // declarada no anúncio, que é outra coisa e não pode virar envio.
+                    const vEFull = !!v.inventory_id;
 
                     if (!porSku[vKey]) {
-                        porSku[vKey] = { item_id: itemId, variation_id: vVarId, sku: vKey, titulo: vTitulo, estoque: vEst, transferenciaMl: vTransf, status };
+                        porSku[vKey] = { item_id: itemId, variation_id: vVarId, sku: vKey, titulo: vTitulo, estoque: vEst, transferenciaMl: vTransf, status, eFull: vEFull };
                     } else {
                         const jaAtivo   = porSku[vKey].status === 'active';
                         const novoAtivo = status === 'active';
-                        if ((!jaAtivo && novoAtivo) || (novoAtivo && vEst > porSku[vKey].estoque)) {
-                            porSku[vKey] = { ...porSku[vKey], estoque: vEst, transferenciaMl: vTransf, item_id: itemId, status };
+                        // Listagem FULL sempre ganha da não-FULL, mesmo pausada ou com menos
+                        // estoque: é ela que define o que existe no galpão.
+                        const substituir = (vEFull !== !!porSku[vKey].eFull)
+                            ? vEFull
+                            : ((!jaAtivo && novoAtivo) || (novoAtivo && vEst > porSku[vKey].estoque));
+                        if (substituir) {
+                            porSku[vKey] = { ...porSku[vKey], estoque: vEst, transferenciaMl: vTransf, item_id: itemId, status, eFull: vEFull };
                         }
                     }
                 }
@@ -281,9 +330,12 @@ router.post('/atualizar', auth, async (req, res) => {
                     : (p.available_quantity || 0);
                 // parcela de "estoque" que o ML já contabiliza como transferência entre galpões
                 const transferenciaMl = (p.inventory_id && transferenciaPorInventory[p.inventory_id]) || 0;
+                // Só é FULL quem tem inventory_id. Sem ele, "estoque" é a quantidade
+                // declarada no anúncio, que é outra coisa e não pode virar envio.
+                const eFull = !!p.inventory_id;
 
                 if (!porSku[sku]) {
-                    porSku[sku] = { item_id: itemId, sku, titulo: tituloBase, estoque, transferenciaMl, status };
+                    porSku[sku] = { item_id: itemId, sku, titulo: tituloBase, estoque, transferenciaMl, status, eFull };
                 } else {
                     const novoEPar      = ePar(tituloBase, sku);
                     const existenteEPar = ePar(porSku[sku].titulo, porSku[sku].sku);
@@ -292,10 +344,10 @@ router.post('/atualizar', auth, async (req, res) => {
                         // Par colidindo com individual → separa
                         const skuPar = novoEPar ? sku + '#par' : porSku[sku].sku + '#par';
                         if (novoEPar) {
-                            porSku[skuPar] = { item_id: itemId, sku: skuPar, titulo: tituloBase, estoque, transferenciaMl, status };
+                            porSku[skuPar] = { item_id: itemId, sku: skuPar, titulo: tituloBase, estoque, transferenciaMl, status, eFull };
                         } else {
                             porSku[skuPar] = { ...porSku[sku], sku: skuPar };
-                            porSku[sku]    = { item_id: itemId, sku, titulo: tituloBase, estoque, transferenciaMl, status };
+                            porSku[sku]    = { item_id: itemId, sku, titulo: tituloBase, estoque, transferenciaMl, status, eFull };
                         }
                         escrever(`[AVISO] SKU "${sku}" colide entre PAR e INDIVIDUAL — separados automaticamente`);
                     } else {
@@ -307,13 +359,18 @@ router.post('/atualizar', auth, async (req, res) => {
                             e._itemIds.push(itemId.toLowerCase());
                             const jaAtivo   = e.status === 'active';
                             const novoAtivo = status === 'active';
-                            if ((!jaAtivo && novoAtivo) || (novoAtivo && estoque > e.estoque)) {
-                                porSku[entradaExistente] = { ...e, estoque, transferenciaMl, item_id: itemId, status };
+                            // Listagem FULL sempre ganha da não-FULL, mesmo pausada ou com
+                            // menos estoque: é ela que define o que existe no galpão.
+                            const substituir = (eFull !== !!e.eFull)
+                                ? eFull
+                                : ((!jaAtivo && novoAtivo) || (novoAtivo && estoque > e.estoque));
+                            if (substituir) {
+                                porSku[entradaExistente] = { ...e, estoque, transferenciaMl, item_id: itemId, status, eFull };
                             }
                         } else {
                             // Produto diferente com mesmo SKU → entrada alternativa com chave sku~itemId
                             const skuAlt = sku + '~' + itemId.toLowerCase();
-                            porSku[skuAlt] = { item_id: itemId, sku: skuAlt, titulo: tituloBase, estoque, transferenciaMl, status };
+                            porSku[skuAlt] = { item_id: itemId, sku: skuAlt, titulo: tituloBase, estoque, transferenciaMl, status, eFull };
                             if (!porSku[sku]._itemIds) porSku[sku]._itemIds = [porSku[sku].item_id.toLowerCase()];
                             escrever(`[AVISO] SKU "${sku}" usado em produtos diferentes: "${tituloBase.substring(0, 40)}"`);
                         }
@@ -337,6 +394,16 @@ router.post('/atualizar', auth, async (req, res) => {
                 transitoPorSku[k] = (transitoPorSku[k] || 0) + qty;
             }
         }
+
+        // Só trabalhamos com FULL. Anúncio sem inventory_id não tem estoque em galpão
+        // do ML — o "estoque" dele é quantidade declarada no anúncio, que não pode ser
+        // reposta nem enviada. Manter esses produtos na base só polui a tela e faz o
+        // usuário planejar envio de algo que não existe no FULL.
+        const totalAntesFiltro = Object.keys(porSku).length;
+        for (const [k, d] of Object.entries(porSku)) {
+            if (!d.eFull) delete porSku[k];
+        }
+        escrever(`Somente FULL: ${Object.keys(porSku).length} de ${totalAntesFiltro} produtos (${totalAntesFiltro - Object.keys(porSku).length} sem inventory_id descartados)`);
 
         const duplicidadesEvitadas = [];
         const reposicao = Object.values(porSku).map(d => {
@@ -371,12 +438,11 @@ router.post('/atualizar', auth, async (req, res) => {
             // introduzia erro de até 1 unidade na reposição.
             const vdm = vendas30 / 30;
             const mediaDia = +vdm.toFixed(2);   // só para exibição
-            const cobertura = d.estoque === 0 ? 0 : (mediaDia > 0 ? +(d.estoque / mediaDia).toFixed(1) : 999);
             // Dias de venda até a mercadoria chegar. Só vale para anúncio ativo: pausado
             // não vende durante a espera, então não consome estoque nesse período.
             const diasAteChegar = d.status === 'active' ? diasColeta : 0;
-            // estoque alvo − estoque projetado no fim da coleta, com o que está a
-            // caminho contando como disponível
+            // estoque alvo − estoque projetado no fim da coleta (já descontado o que
+            // vende nesse período), com o que está a caminho contando como disponível
             // o trânsito é indexado pelo SKU do envio, sem o sufixo interno da chave
             const skuBase = d.sku.includes('~') ? d.sku.split('~')[0] : d.sku;
             // Unidades que o ML já recebeu e move entre galpões já estão dentro de
@@ -387,6 +453,11 @@ router.post('/atualizar', auth, async (req, res) => {
             const transitoLocal = transitoPorSku[skuBase] || 0;
             const jaContadoNoEstoque = d.transferenciaMl || 0;
             const emTransito = Math.max(0, transitoLocal - jaContadoNoEstoque);
+            // Cobertura conta o que já está a caminho — a reposição trata o trânsito como
+            // disponível, e sem isso as duas colunas se contradiziam: cobertura 0 (alarme
+            // de ruptura) tendo unidades a caminho. Usa vdm em precisão total, não mediaDia.
+            const estoqueCoberto = d.estoque + emTransito;
+            const cobertura = estoqueCoberto === 0 ? 0 : (vdm > 0 ? +(estoqueCoberto / vdm).toFixed(1) : 999);
             if (transitoLocal > 0 && jaContadoNoEstoque > 0) {
                 duplicidadesEvitadas.push({ sku: skuBase, transitoLocal, jaContadoNoEstoque, usado: emTransito });
             }
@@ -446,6 +517,50 @@ router.post('/atualizar', auth, async (req, res) => {
     } catch (err) {
         escrever(`ERRO: ${err.response?.data?.message || err.message}`);
         res.end();
+    }
+});
+
+// ── Faturamento mensal ───────────────────────────────────────────────────────
+router.get('/faturamento_mensal', auth, async (req, res) => {
+    const cacheFile = 'faturamento_mensal.json';
+    const cached = lerJson(cacheFile, null);
+    if (cached && cached._atualizado) {
+        const idade = Date.now() - new Date(cached._atualizado).getTime();
+        if (idade < 6 * 3600 * 1000) return res.json(cached.dados);
+    }
+    try {
+        const { access_token, user_id } = await TokenManager.getToken();
+        const headers = { Authorization: `Bearer ${access_token}` };
+        const LIMIT = 50;
+        const hoje = new Date();
+        const dados = [];
+        for (let m = 5; m >= 0; m--) {
+            const inicio = new Date(hoje.getFullYear(), hoje.getMonth() - m, 1);
+            const fim    = new Date(hoje.getFullYear(), hoje.getMonth() - m + 1, 0, 23, 59, 59);
+            const label  = inicio.toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '');
+            let total = 0, offset = 0, paging = null;
+            do {
+                const { data } = await axios.get('https://api.mercadolibre.com/orders/search', {
+                    headers,
+                    params: {
+                        seller: user_id,
+                        'order.date_created.from': inicio.toISOString(),
+                        'order.date_created.to':   fim.toISOString(),
+                        limit: LIMIT, offset,
+                    },
+                });
+                if (paging === null) paging = data.paging?.total || 0;
+                for (const pedido of data.results || [])
+                    for (const item of pedido.order_items || [])
+                        total += (item.unit_price || 0) * item.quantity;
+                offset += LIMIT;
+            } while (offset < paging);
+            dados.push({ mes: label, valor: +total.toFixed(2) });
+        }
+        salvarJson(cacheFile, { _atualizado: new Date().toISOString(), dados });
+        res.json(dados);
+    } catch (err) {
+        res.status(500).json({ erro: err.message });
     }
 });
 
