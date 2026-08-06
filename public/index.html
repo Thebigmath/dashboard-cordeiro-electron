@@ -227,6 +227,24 @@
 
             <div class="filter-divider"></div>
 
+            <div class="filter-section-title">Fornecedor:</div>
+            <div id="f-fornecedores" style="display:flex;flex-direction:column;gap:8px;margin-top:4px">
+                <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer">
+                    <input type="checkbox" value="Fitam" checked onchange="aplicarFiltros()">
+                    <span>Fitam <span style="color:var(--l3);font-size:11px">(Lanternas)</span></span>
+                </label>
+                <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer">
+                    <input type="checkbox" value="Attis" checked onchange="aplicarFiltros()">
+                    <span>Attis <span style="color:var(--l3);font-size:11px">(Tapetes 00TB)</span></span>
+                </label>
+                <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer">
+                    <input type="checkbox" value="Grid" checked onchange="aplicarFiltros()">
+                    <span>Grid <span style="color:var(--l3);font-size:11px">(Tapetes TB)</span></span>
+                </label>
+            </div>
+
+            <div class="filter-divider"></div>
+
             <div class="filter-section-title">Filtro por Marca:</div>
             <div id="f-marcas" class="marca-list"></div>
 

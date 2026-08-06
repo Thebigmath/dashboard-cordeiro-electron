@@ -104,6 +104,22 @@ window.custosMap   = {};
 const KEYWORDS_EMPILHADEIRA = ['empilhadeira','hyster','yale','bobcat','forklift','trator'];
 const MARCAS_CONHECIDAS = ['Hyster','Yale','Retrovex','Fitam','Toyota','Crown','Linde','Still','BYD','Fiat','Chevrolet','Jeep','Renault','Volkswagen','Ford','Honda','Nissan','Mitsubishi','Caterpillar','Clark'];
 
+function detectarFornecedor(p) {
+    const t = (p.titulo || '').toLowerCase();
+    const s = (p.sku    || '').toLowerCase();
+    if (t.includes('lanterna')) return 'Fitam';
+    if (/^\d+tb/.test(s))      return 'Attis';
+    if (/^tb\d+/.test(s))      return 'Grid';
+    return null;
+}
+
+function getFiltrosFornecedores() {
+    const checks = document.querySelectorAll('#f-fornecedores input[type=checkbox]');
+    if (!checks.length) return null;
+    if ([...checks].every(c => c.checked)) return null;
+    return new Set([...checks].filter(c => c.checked).map(c => c.value));
+}
+
 function isEmpilhadeira(p) {
     const t = (p.titulo || '').toLowerCase();
     const s = (p.sku    || '').toLowerCase();
@@ -152,6 +168,7 @@ function contarFiltrosAtivos() {
     if (statusOpts.some(o => !o.selected)) n++;
     const marcas = getFiltrosMarcas();
     if (marcas) n++;
+    if (getFiltrosFornecedores()) n++;
     return n;
 }
 
@@ -173,7 +190,8 @@ function aplicarFiltros() {
     const fSemTransito = document.getElementById('f-semtransito')?.checked;
     const fComEstoque  = document.getElementById('f-comestoque')?.checked;
     const statusSel    = new Set([...(document.getElementById('f-status')?.selectedOptions || [])].map(o => o.value));
-    const marcasSel    = getFiltrosMarcas();
+    const marcasSel       = getFiltrosMarcas();
+    const fornecedoresSel = getFiltrosFornecedores();
 
     let lista = window.produtosReposicao.map(p => {
         if (periodo !== 30) {
@@ -198,6 +216,12 @@ function aplicarFiltros() {
         lista = lista.filter(p => {
             const m = detectarMarca(p.titulo);
             return m ? marcasSel.has(m) : true;
+        });
+
+    if (fornecedoresSel)
+        lista = lista.filter(p => {
+            const f = detectarFornecedor(p);
+            return f ? fornecedoresSel.has(f) : true;
         });
 
     if (fRuptura)     lista = lista.filter(p => Number(p.estoque) === 0 && Number(p.mediaDia) > 0);
@@ -243,6 +267,7 @@ window.limparFiltros = function() {
     const status = document.getElementById('f-status');
     if (status) [...status.options].forEach(o => o.selected = true);
     document.querySelectorAll('#f-marcas input').forEach(c => c.checked = true);
+    document.querySelectorAll('#f-fornecedores input').forEach(c => c.checked = true);
     aplicarFiltros();
 };
 
