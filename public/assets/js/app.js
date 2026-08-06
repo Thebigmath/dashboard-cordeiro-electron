@@ -197,7 +197,7 @@ function aplicarFiltros() {
     if (marcasSel)
         lista = lista.filter(p => {
             const m = detectarMarca(p.titulo);
-            return m ? marcasSel.has(m) : false;
+            return m ? marcasSel.has(m) : true;
         });
 
     if (fRuptura)     lista = lista.filter(p => Number(p.estoque) === 0 && Number(p.mediaDia) > 0);
