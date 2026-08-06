@@ -713,19 +713,17 @@ router.post('/gerar_planilha', auth, (req, res) => {
         if (!Array.isArray(itens) || !itens.length) return res.status(400).json({ erro: 'Sem itens' });
         const wb = XLSX.utils.book_new();
         const ws = {};
+        const totalRows = 5 + itens.length;
         itens.forEach(({ item_id, qtdFull }, i) => {
-            // O template do ML tem 5 linhas de cabeçalho em branco: os dados começam na
-            // linha 6. Conferido contra o arquivo que o ML aceitou (CORDEIRO_CAR, 13 itens
-            // de L6 a L18).
             const row = 6 + i;
-            // Só D e F. No template do ML as colunas A, B, C e E não têm célula alguma —
-            // criar célula de texto vazio ali fazia o arquivo divergir do modelo aceito.
             ws[`D${row}`] = { v: item_id, t: 's' };
             ws[`F${row}`] = { v: Number(qtdFull) || 0, t: 'n' };
         });
-        ws['!ref'] = `A1:F${5 + itens.length}`;
+        ws['!ref'] = `A1:F${totalRows}`;
+        // Altura de linha comprimida igual ao template do ML (~12.75pt)
+        ws['!rows'] = Array.from({ length: totalRows }, () => ({ hpt: 12.75, hpx: 17 }));
         // Template do ML tem duas sheets: "Planilha 1" (vazia) e "Dados Mercado Livre"
-        const wsVazia = { 'A1': { v: '', t: 's' }, '!ref': 'A1' };
+        const wsVazia = { '!ref': 'A1:A1' };
         XLSX.utils.book_append_sheet(wb, wsVazia, 'Planilha 1');
         XLSX.utils.book_append_sheet(wb, ws, 'Dados Mercado Livre');
 
@@ -753,7 +751,7 @@ router.get('/app_info', auth, (req, res) => {
         porta:       config.app_porta   || 3002,
         versao:      pkg.version,
         outro_app:   config.outro_app   || null,
-        dias_coleta: config.dias_coleta || 20,
+        dias_coleta: config.dias_coleta || 17,
         dias_alvo:   config.dias_alvo   || 35,
     });
 });
