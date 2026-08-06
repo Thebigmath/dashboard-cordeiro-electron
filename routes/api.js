@@ -75,7 +75,7 @@ router.post('/atualizar', auth, async (req, res) => {
         const LIMIT = 50;
         const config   = lerJson('config.json', {});
         const diasAlvo  = config.dias_alvo   || 35;
-        const diasColeta = config.dias_coleta || 20;
+        const diasColeta = config.dias_coleta || 17;
 
         // 0. Auto-verificar envios Full já recebidos pelo ML
         const enviosList = lerJson('envios_full.json', []);
