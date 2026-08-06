@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, dialog } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, shell } = require('electron');
 const { autoUpdater } = require('electron-updater');
 const path = require('path');
 const fs = require('fs');
@@ -40,6 +40,8 @@ for (const file of ['config.json', 'usuarios.json', 'custos.json', 'envios_full.
             if (defaults.outro_app || existing.outro_app) {
                 merged.outro_app = { ...(defaults.outro_app || {}), ...(existing.outro_app || {}) };
             }
+            // Migração: dias_coleta ≤ 17 era o antigo padrão hardcoded (bug) — atualiza para o default correto.
+            if ((merged.dias_coleta || 0) <= 17) merged.dias_coleta = defaults.dias_coleta || 20;
             fs.writeFileSync(dest, JSON.stringify(merged, null, 4), 'utf8');
         } catch {}
     }
@@ -73,6 +75,10 @@ autoUpdater.on('update-downloaded', () => {
 
 ipcMain.on('install-update', () => {
     autoUpdater.quitAndInstall();
+});
+
+ipcMain.on('open-external', (_, url) => {
+    shell.openExternal(url);
 });
 
 app.whenReady().then(() => {

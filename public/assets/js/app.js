@@ -634,7 +634,9 @@ if (btnGerarPlanilha) {
 /* ── Enviar para Full ───────────────────────────────────────────────────── */
 if (btnEnviarFull) {
     btnEnviarFull.addEventListener('click', () => {
-        window.open('https://myaccount.mercadolivre.com.br/shipping/import/excel/upload', '_blank');
+        const url = 'https://myaccount.mercadolivre.com.br/shipping/import/excel/upload';
+        if (window.electronAPI?.openExternal) window.electronAPI.openExternal(url);
+        else window.open(url, '_blank');
     });
 }
 
