@@ -193,10 +193,6 @@
                 <label class="toggle-switch"><input type="checkbox" id="f-semvenda" onchange=""><span class="toggle-knob"></span></label>
             </div>
             <div class="filter-toggle-row">
-                <label class="filter-toggle-label" for="f-ajuste">Ajuste de Ruptura <i class="bi bi-info-circle" style="font-size:10px;color:var(--l3)" title="Tem vendas mas estoque zerado"></i></label>
-                <label class="toggle-switch"><input type="checkbox" id="f-ajuste" onchange=""><span class="toggle-knob"></span></label>
-            </div>
-            <div class="filter-toggle-row">
                 <label class="filter-toggle-label" for="f-comtransito">com itens em trânsito <i class="bi bi-info-circle" style="font-size:10px;color:var(--l3)" title="Tem qtd em trânsito"></i></label>
                 <label class="toggle-switch"><input type="checkbox" id="f-comtransito" onchange=""><span class="toggle-knob"></span></label>
             </div>
@@ -288,11 +284,6 @@ document.getElementById('btnAtualizarML')?.addEventListener('click', async () =>
     }
 
     setTimeout(() => { modal.hide(); carregarProdutos(); }, 1500);
-});
-
-// User display
-fetch('/api/token_status').then(r=>r.json()).then(d=>{
-    document.getElementById('userDisplay').textContent = 'CORDEIRO';
 });
 
 requestAnimationFrame(()=>requestAnimationFrame(()=>document.body.classList.add('page-ready')));
