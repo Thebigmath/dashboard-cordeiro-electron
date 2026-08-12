@@ -600,6 +600,8 @@ router.post('/upload_pdf', auth, upload.single('pdf'), async (req, res) => {
             if (m) {
                 const sku = m[1].toLowerCase();
                 const qty = parseInt(m[2]);
+                // anos do nome do produto (ex: "2008 2009 2010") não são quantidades
+                if (qty >= 1990 && qty <= 2040) continue;
                 transito[sku] = { quantidade: qty, envio: req.body.numero || '' };
                 encontrados++;
             }
