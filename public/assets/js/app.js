@@ -458,6 +458,10 @@ function carregarProdutos() {
             });
             const produtos = Object.values(mapa);
             window.produtosReposicao = produtos;
+            // reposicao.json guarda o resultado do último motor, mas o trânsito muda a
+            // cada envio editado. Sem recalcular aqui, EM TRÂNSITO atualizava sozinha e
+            // REPOSIÇÃO/COBERTURA ficavam congeladas no valor da última coleta.
+            recalcularComTransito();
             renderizarGraficoFaturamento();
             construirListaMarcas();
             aplicarFiltros();
@@ -523,27 +527,30 @@ function calcularReposicaoMagis5(vendas30d, diasColeta, diasAlvo, estoqueAtualFu
 }
 
 /* ── Recalcular ─────────────────────────────────────────────────────────── */
+// Atualiza a base e reaplica os filtros. Escrever direto em
+// produtosFiltrados descartava categoria, marca e pesquisa.
+function recalcularComTransito() {
+    if (!window.produtosReposicao.length) return;
+    const diasC = parseInt(diasColeta?.value) || 0;
+    const diasA = parseInt(diasAlvo?.value)   || 35;
+
+    window.produtosReposicao = window.produtosReposicao.map(p => {
+        const estoque  = Number(p.estoque);
+        const vendas30 = Number(p.vendas30);
+        const transito = Number(window.transitoMap[p.sku] || 0);
+        const vdm      = Math.round((vendas30 / 30) * 100) / 100;
+        // cobertura conta o trânsito e usa a média em precisão total — igual ao backend
+        const vdmReal   = vendas30 / 30;
+        const coberto   = estoque + transito;
+        const cobertura = coberto === 0 ? 0 : (vdmReal > 0 ? parseFloat((coberto / vdmReal).toFixed(1)) : 999);
+        const reposicao = calcularReposicaoMagis5(vendas30, diasC, diasA, estoque, transito, 1, p.status === 'active');
+        return { ...p, mediaDia: vdm, cobertura, reposicao };
+    });
+}
+
 if (btnRecalcular) {
     btnRecalcular.addEventListener('click', () => {
-        if (!window.produtosReposicao.length) return;
-        const diasC = parseInt(diasColeta?.value) || 0;
-        const diasA = parseInt(diasAlvo?.value)   || 35;
-
-        // Atualiza a base e reaplica os filtros. Escrever direto em
-        // produtosFiltrados descartava categoria, marca e pesquisa.
-        window.produtosReposicao = window.produtosReposicao.map(p => {
-            const estoque  = Number(p.estoque);
-            const vendas30 = Number(p.vendas30);
-            const transito = Number(window.transitoMap[p.sku] || 0);
-            const vdm      = Math.round((vendas30 / 30) * 100) / 100;
-            // cobertura conta o trânsito e usa a média em precisão total — igual ao backend
-            const vdmReal   = vendas30 / 30;
-            const coberto   = estoque + transito;
-            const cobertura = coberto === 0 ? 0 : (vdmReal > 0 ? parseFloat((coberto / vdmReal).toFixed(1)) : 999);
-            const reposicao = calcularReposicaoMagis5(vendas30, diasC, diasA, estoque, transito, 1, p.status === 'active');
-            return { ...p, mediaDia: vdm, cobertura, reposicao };
-        });
-
+        recalcularComTransito();
         paginaAtual = 1;
         aplicarFiltros();
     });
