@@ -33,11 +33,21 @@ router.get('/dados', auth, (req, res) => {
     const ultima    = fs.existsSync(path.join(STORAGE, 'ultima_atualizacao.txt'))
         ? fs.readFileSync(path.join(STORAGE, 'ultima_atualizacao.txt'), 'utf8') : null;
 
-    // Soma SKUs dos envios Full ativos que ainda não foram totalmente recebidos
+    // Soma dos envios Full ativos que ainda não foram totalmente recebidos.
+    // Quando o envio traz o "Código ML" (inventory_id), só ele conta — é único por
+    // produto. Sem código, cai no seller_sku, que não distingue produtos que o dividem.
+    const transitoPorInv = {};
     const envios = lerJson('envios_full.json', []);
     for (const e of envios) {
         if (e.inativo === true || e.ativo === false) continue;
         if ((e.recebido || 0) >= (e.unidades || 0) && (e.unidades || 0) > 0) continue;
+        if (e.codigos && Object.keys(e.codigos).length) {
+            for (const [cod, qty] of Object.entries(e.codigos)) {
+                const k = String(cod).toUpperCase();
+                transitoPorInv[k] = (transitoPorInv[k] || 0) + qty;
+            }
+            continue;
+        }
         const entradas = e.skus
             ? Object.entries(e.skus)
             : (e.produtos || []).map(p => [p.sku, p.quantidade]);
@@ -45,6 +55,18 @@ router.get('/dados', auth, (req, res) => {
             const k = sku.toLowerCase();
             transito[k] = (transito[k] || 0) + qty;
         }
+    }
+
+    // Trânsito resolvido POR PRODUTO, com a mesma conta do motor. A tela não conseguia
+    // refazer isso: o rótulo que ela exibe ("010tb-polo") não é a chave do mapa por SKU
+    // ("010tb"), então todo produto que divide SKU aparecia com trânsito 0.
+    const transitoPorChave = {};
+    for (const p of reposicao) {
+        const chave = p.chave || p.sku;
+        const base  = String(chave).split('~')[0].toLowerCase();
+        const porCodigo = p.inventory_id ? (transitoPorInv[String(p.inventory_id).toUpperCase()] || 0) : 0;
+        const bruto = porCodigo || (transito[base] || 0);
+        transitoPorChave[chave] = Math.max(0, bruto - (p.transferenciaMl || 0));
     }
 
     // Mesmo desconto que o motor aplica: unidades que o ML já recebeu e move entre
@@ -62,7 +84,7 @@ router.get('/dados', auth, (req, res) => {
         if (transferenciaPorSku[k]) transito[k] = Math.max(0, transito[k] - transferenciaPorSku[k]);
     }
 
-    res.json({ produtos: reposicao, transito, ultima_atualizacao: ultima });
+    res.json({ produtos: reposicao, transito, transito_por_chave: transitoPorChave, ultima_atualizacao: ultima });
 });
 
 // ── Motor de reposição ──────────────────────────────────────────────────────
@@ -307,7 +329,7 @@ router.post('/atualizar', auth, async (req, res) => {
                     const vEFull = !!v.inventory_id;
 
                     if (!porSku[vKey]) {
-                        porSku[vKey] = { item_id: itemId, variation_id: vVarId, sku: vKey, titulo: vTitulo, estoque: vEst, transferenciaMl: vTransf, status, eFull: vEFull };
+                        porSku[vKey] = { item_id: itemId, variation_id: vVarId, inventory_id: v.inventory_id || null, sku: vKey, titulo: vTitulo, estoque: vEst, transferenciaMl: vTransf, status, eFull: vEFull };
                     } else {
                         const jaAtivo   = porSku[vKey].status === 'active';
                         const novoAtivo = status === 'active';
@@ -317,7 +339,7 @@ router.post('/atualizar', auth, async (req, res) => {
                             ? vEFull
                             : ((!jaAtivo && novoAtivo) || (novoAtivo && vEst > porSku[vKey].estoque));
                         if (substituir) {
-                            porSku[vKey] = { ...porSku[vKey], estoque: vEst, transferenciaMl: vTransf, item_id: itemId, status, eFull: vEFull };
+                            porSku[vKey] = { ...porSku[vKey], estoque: vEst, transferenciaMl: vTransf, item_id: itemId, inventory_id: v.inventory_id || null, status, eFull: vEFull };
                         }
                     }
                 }
@@ -338,9 +360,13 @@ router.post('/atualizar', auth, async (req, res) => {
                 // Só é FULL quem tem inventory_id. Sem ele, "estoque" é a quantidade
                 // declarada no anúncio, que é outra coisa e não pode virar envio.
                 const eFull = !!p.inventory_id;
+                // inventory_id e o "Codigo ML" do galpao: unico por produto, mesmo quando
+                // varios produtos dividem o seller_sku. E por ele que o transito consegue
+                // saber a qual produto pertence um envio.
+                const invId = p.inventory_id || null;
 
                 if (!porSku[sku]) {
-                    porSku[sku] = { item_id: itemId, sku, titulo: tituloBase, estoque, transferenciaMl, status, eFull };
+                    porSku[sku] = { item_id: itemId, inventory_id: invId, sku, titulo: tituloBase, estoque, transferenciaMl, status, eFull };
                 } else {
                     const novoEPar      = ePar(tituloBase, sku);
                     const existenteEPar = ePar(porSku[sku].titulo, porSku[sku].sku);
@@ -349,7 +375,7 @@ router.post('/atualizar', auth, async (req, res) => {
                         // Par colidindo com individual → separa
                         const skuPar = novoEPar ? sku + '#par' : porSku[sku].sku + '#par';
                         if (novoEPar) {
-                            porSku[skuPar] = { item_id: itemId, sku: skuPar, titulo: tituloBase, estoque, transferenciaMl, status, eFull };
+                            porSku[skuPar] = { item_id: itemId, inventory_id: invId, sku: skuPar, titulo: tituloBase, estoque, transferenciaMl, status, eFull };
                         } else {
                             porSku[skuPar] = { ...porSku[sku], sku: skuPar };
                             porSku[sku]    = { item_id: itemId, sku, titulo: tituloBase, estoque, transferenciaMl, status, eFull };
@@ -370,12 +396,12 @@ router.post('/atualizar', auth, async (req, res) => {
                                 ? eFull
                                 : ((!jaAtivo && novoAtivo) || (novoAtivo && estoque > e.estoque));
                             if (substituir) {
-                                porSku[entradaExistente] = { ...e, estoque, transferenciaMl, item_id: itemId, status, eFull };
+                                porSku[entradaExistente] = { ...e, estoque, transferenciaMl, item_id: itemId, inventory_id: invId, status, eFull };
                             }
                         } else {
                             // Produto diferente com mesmo SKU → entrada alternativa com chave sku~itemId
                             const skuAlt = sku + '~' + itemId.toLowerCase();
-                            porSku[skuAlt] = { item_id: itemId, sku: skuAlt, titulo: tituloBase, estoque, transferenciaMl, status, eFull };
+                            porSku[skuAlt] = { item_id: itemId, inventory_id: invId, sku: skuAlt, titulo: tituloBase, estoque, transferenciaMl, status, eFull };
                             if (!porSku[sku]._itemIds) porSku[sku]._itemIds = [porSku[sku].item_id.toLowerCase()];
                             escrever(`[AVISO] SKU "${sku}" usado em produtos diferentes: "${tituloBase.substring(0, 40)}"`);
                         }
@@ -391,9 +417,22 @@ router.post('/atualizar', auth, async (req, res) => {
         for (const [k, v] of Object.entries(transitoRaw2)) {
             transitoPorSku[k.toLowerCase()] = typeof v === 'object' ? (v.quantidade ?? 0) : (Number(v) || 0);
         }
+        // Trânsito por "Código ML" (inventory_id). O envio indexado por seller_sku não
+        // consegue dizer a qual produto pertence quando vários dividem o mesmo SKU: as
+        // mesmas unidades acabavam creditadas a todos eles. O código do galpão é único
+        // por produto, então quando o envio o traz, ele manda.
+        const transitoPorInv = {};
         for (const e of lerJson('envios_full.json', [])) {
             if (e.inativo === true || e.ativo === false) continue;
             if ((e.recebido || 0) >= (e.unidades || 0) && (e.unidades || 0) > 0) continue;
+            if (e.codigos && Object.keys(e.codigos).length) {
+                // Envio novo: só o código conta, senão as mesmas unidades entrariam duas vezes
+                for (const [cod, qty] of Object.entries(e.codigos)) {
+                    const k = String(cod).toUpperCase();
+                    transitoPorInv[k] = (transitoPorInv[k] || 0) + qty;
+                }
+                continue;
+            }
             // suporta formato novo {skus:{sku:qty}} e formato legado {produtos:[{sku,quantidade}]}
             const entradas = e.skus
                 ? Object.entries(e.skus)
@@ -507,12 +546,16 @@ router.post('/atualizar', auth, async (req, res) => {
             // vende nesse período), com o que está a caminho contando como disponível
             // o trânsito é indexado pelo SKU do envio, sem o sufixo interno da chave
             const skuBase = d.sku.includes('~') ? d.sku.split('~')[0] : d.sku;
+            // Código ML primeiro: é único por produto. Só cai no SKU quando o envio não
+            // tem código — aí produtos que dividem o SKU voltam a receber o mesmo valor,
+            // que é o comportamento antigo e o motivo de existir o painel de avisos.
+            const transitoPorCodigo = d.inventory_id ? (transitoPorInv[String(d.inventory_id).toUpperCase()] || 0) : 0;
             // Unidades que o ML já recebeu e move entre galpões já estão dentro de
             // d.estoque. Se o envio que as originou ainda consta aberto em
             // envios_full.json, elas apareceriam de novo no trânsito local e a
             // reposição sairia menor do que o necessário. Só conta o trânsito que o
             // ML ainda não enxerga.
-            const transitoLocal = transitoPorSku[skuBase] || 0;
+            const transitoLocal = transitoPorCodigo || (transitoPorSku[skuBase] || 0);
             const jaContadoNoEstoque = d.transferenciaMl || 0;
             const emTransito = Math.max(0, transitoLocal - jaContadoNoEstoque);
             // Cobertura conta o que já está a caminho — a reposição trata o trânsito como

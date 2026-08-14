@@ -86,6 +86,20 @@ let apenasSelecionados = false;
 
 const chaveDe = p => p.chave || p.sku;
 
+// Trânsito do produto. O servidor resolve por produto (transito_por_chave) porque o
+// rótulo exibido ("010tb-polo") não é a chave do mapa por SKU ("010tb") — buscar por
+// p.sku dava 0 em todo produto que divide SKU com outro. O mapa por SKU fica como
+// reserva para dados antigos, usando a chave sem o sufixo interno "~itemid".
+window.transitoPorChave = {};
+function transitoDe(p) {
+    const chave = chaveDe(p);
+    if (Object.prototype.hasOwnProperty.call(window.transitoPorChave, chave)) {
+        return Number(window.transitoPorChave[chave]) || 0;
+    }
+    const base = String(chave).split('~')[0];
+    return Number(window.transitoMap[base] ?? window.transitoMap[p.sku] ?? 0) || 0;
+}
+
 // Fórmula alternativa testada (2026-08-05): alvo - estoque - trânsito
 // Resultado: ~7.8% de match com Magiic — descartada.
 // function qtdFullSugerida(p) {
@@ -194,7 +208,7 @@ function aplicarFiltros() {
     let lista = window.produtosReposicao.map(p => {
         if (periodo !== 30) {
             const mediaDia = p.vendas30 / periodo;
-            const coberto  = Number(p.estoque) + Number(window.transitoMap[p.sku] || 0);
+            const coberto  = Number(p.estoque) + transitoDe(p);
             const cobertura = coberto === 0 ? 0 : (mediaDia > 0 ? parseFloat((coberto / mediaDia).toFixed(1)) : 999);
             return { ...p, mediaDia: Math.round(mediaDia * 100) / 100, cobertura };
         }
@@ -225,8 +239,8 @@ function aplicarFiltros() {
     if (fRuptura)     lista = lista.filter(p => Number(p.estoque) === 0 && Number(p.mediaDia) > 0);
     if (fReposicao)   lista = lista.filter(p => Number(p.reposicao) > 0);
     if (fSemVenda)    lista = lista.filter(p => Number(p.mediaDia) === 0);
-    if (fComTransito) lista = lista.filter(p => Number(window.transitoMap[p.sku] || 0) > 0);
-    if (fSemTransito) lista = lista.filter(p => Number(window.transitoMap[p.sku] || 0) === 0);
+    if (fComTransito) lista = lista.filter(p => transitoDe(p) > 0);
+    if (fSemTransito) lista = lista.filter(p => transitoDe(p) === 0);
     if (fComEstoque)  lista = lista.filter(p => Number(p.estoque) > 0);
     if (apenasSelecionados) lista = lista.filter(p => window.selecionados.has(chaveDe(p)));
 
@@ -347,7 +361,7 @@ function renderPagina(lista, pagina) {
             <td>${p.mediaDia}</td>
             <td>${Number(p.cobertura) >= 999 ? '—' : p.cobertura}</td>
             <td><strong>${Number(p.reposicaoBruta ?? p.reposicao) > 0 ? (p.reposicaoBruta ?? p.reposicao) : '—'}</strong></td>
-            <td><span class="qtd-transito-display" style="display:inline-block;min-width:40px;text-align:center;font-weight:600;color:${(window.transitoMap[p.sku]||0)>0?'#f39c12':'var(--l3,#8ca0b3)'}">${window.transitoMap[p.sku] || 0}</span></td>
+            <td><span class="qtd-transito-display" style="display:inline-block;min-width:40px;text-align:center;font-weight:600;color:${transitoDe(p)>0?'#f39c12':'var(--l3,#8ca0b3)'}">${transitoDe(p)}</span></td>
             <td><input type="number" class="qtd-full" data-chave="${chaveDe(p)}" data-item-id="${p.item_id || ''}" min="0" placeholder="0" value="${window.qtdsFull[chaveDe(p)] ?? (qtdFullSugerida(p) > 0 ? qtdFullSugerida(p) : '')}" style="${inputStyle}" oninput="window.qtdsFull[this.dataset.chave]=parseInt(this.value)||0"></td>
         </tr>`).join('');
 
@@ -492,6 +506,7 @@ function carregarProdutos() {
         .then(resp => {
             const raw = resp.produtos || resp;
             if (resp.transito) window.transitoMap = resp.transito;
+            if (resp.transito_por_chave) window.transitoPorChave = resp.transito_por_chave;
             // O motor já deduplicou por SKU (estoque = max, vendas = soma)
             // Aqui apenas indexa por SKU como segurança
             const mapa = {};
@@ -597,7 +612,7 @@ function recalcularComTransito() {
     window.produtosReposicao = window.produtosReposicao.map(p => {
         const estoque  = Number(p.estoque);
         const vendas30 = Number(p.vendas30);
-        const transito = Number(window.transitoMap[p.sku] || 0);
+        const transito = transitoDe(p);
         const vdm      = Math.round((vendas30 / 30) * 100) / 100;
         // cobertura conta o trânsito e usa a média em precisão total — igual ao backend
         const vdmReal   = vendas30 / 30;
