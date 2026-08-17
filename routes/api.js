@@ -36,26 +36,35 @@ router.get('/dados', auth, (req, res) => {
     // Soma dos envios Full ativos que ainda não foram totalmente recebidos.
     // Quando o envio traz o "Código ML" (inventory_id), só ele conta — é único por
     // produto. Sem código, cai no seller_sku, que não distingue produtos que o dividem.
+    // Três mapas, porque o produto pode ou não ter o Código ML gravado ainda:
+    //   porInv      — envios novos, que trazem o código (único por produto)
+    //   skuLegado   — envios antigos, só com SKU, + o transito_local.json
+    //   skuTotal    — todos, usado quando o produto ainda não tem inventory_id na base
+    // Sem o skuTotal, um envio novo somia da tela até o motor rodar e gravar o código.
     const transitoPorInv = {};
+    const skuLegado = { ...transito };
+    const skuTotal  = { ...transito };
     const envios = lerJson('envios_full.json', []);
     for (const e of envios) {
         if (e.inativo === true || e.ativo === false) continue;
         if ((e.recebido || 0) >= (e.unidades || 0) && (e.unidades || 0) > 0) continue;
-        if (e.codigos && Object.keys(e.codigos).length) {
+        const temCodigos = e.codigos && Object.keys(e.codigos).length > 0;
+        if (temCodigos) {
             for (const [cod, qty] of Object.entries(e.codigos)) {
                 const k = String(cod).toUpperCase();
                 transitoPorInv[k] = (transitoPorInv[k] || 0) + qty;
             }
-            continue;
         }
         const entradas = e.skus
             ? Object.entries(e.skus)
             : (e.produtos || []).map(p => [p.sku, p.quantidade]);
         for (const [sku, qty] of entradas) {
             const k = sku.toLowerCase();
-            transito[k] = (transito[k] || 0) + qty;
+            skuTotal[k] = (skuTotal[k] || 0) + qty;
+            if (!temCodigos) skuLegado[k] = (skuLegado[k] || 0) + qty;
         }
     }
+    Object.assign(transito, skuTotal);   // mapa por SKU exposto continua sendo o total
 
     // Trânsito resolvido POR PRODUTO, com a mesma conta do motor. A tela não conseguia
     // refazer isso: o rótulo que ela exibe ("010tb-polo") não é a chave do mapa por SKU
@@ -64,8 +73,9 @@ router.get('/dados', auth, (req, res) => {
     for (const p of reposicao) {
         const chave = p.chave || p.sku;
         const base  = String(chave).split('~')[0].toLowerCase();
-        const porCodigo = p.inventory_id ? (transitoPorInv[String(p.inventory_id).toUpperCase()] || 0) : 0;
-        const bruto = porCodigo || (transito[base] || 0);
+        const bruto = p.inventory_id
+            ? (transitoPorInv[String(p.inventory_id).toUpperCase()] || 0) + (skuLegado[base] || 0)
+            : (skuTotal[base] || 0);
         transitoPorChave[chave] = Math.max(0, bruto - (p.transferenciaMl || 0));
     }
 
@@ -422,16 +432,16 @@ router.post('/atualizar', auth, async (req, res) => {
         // mesmas unidades acabavam creditadas a todos eles. O código do galpão é único
         // por produto, então quando o envio o traz, ele manda.
         const transitoPorInv = {};
+        const transitoSkuTotal = { ...transitoPorSku };
         for (const e of lerJson('envios_full.json', [])) {
             if (e.inativo === true || e.ativo === false) continue;
             if ((e.recebido || 0) >= (e.unidades || 0) && (e.unidades || 0) > 0) continue;
-            if (e.codigos && Object.keys(e.codigos).length) {
-                // Envio novo: só o código conta, senão as mesmas unidades entrariam duas vezes
+            const temCodigos = e.codigos && Object.keys(e.codigos).length > 0;
+            if (temCodigos) {
                 for (const [cod, qty] of Object.entries(e.codigos)) {
                     const k = String(cod).toUpperCase();
                     transitoPorInv[k] = (transitoPorInv[k] || 0) + qty;
                 }
-                continue;
             }
             // suporta formato novo {skus:{sku:qty}} e formato legado {produtos:[{sku,quantidade}]}
             const entradas = e.skus
@@ -439,7 +449,10 @@ router.post('/atualizar', auth, async (req, res) => {
                 : (e.produtos || []).map(p => [p.sku, p.quantidade]);
             for (const [s, qty] of entradas) {
                 const k = s.toLowerCase();
-                transitoPorSku[k] = (transitoPorSku[k] || 0) + qty;
+                transitoSkuTotal[k] = (transitoSkuTotal[k] || 0) + qty;
+                // transitoPorSku fica só com o legado: envio sem código. Somar os dois
+                // contaria as mesmas unidades duas vezes em quem tem inventory_id.
+                if (!temCodigos) transitoPorSku[k] = (transitoPorSku[k] || 0) + qty;
             }
         }
 
@@ -555,7 +568,9 @@ router.post('/atualizar', auth, async (req, res) => {
             // envios_full.json, elas apareceriam de novo no trânsito local e a
             // reposição sairia menor do que o necessário. Só conta o trânsito que o
             // ML ainda não enxerga.
-            const transitoLocal = transitoPorCodigo || (transitoPorSku[skuBase] || 0);
+            const transitoLocal = d.inventory_id
+                ? transitoPorCodigo + (transitoPorSku[skuBase] || 0)
+                : (transitoSkuTotal[skuBase] || 0);
             const jaContadoNoEstoque = d.transferenciaMl || 0;
             const emTransito = Math.max(0, transitoLocal - jaContadoNoEstoque);
             // Cobertura conta o que já está a caminho — a reposição trata o trânsito como
@@ -687,24 +702,84 @@ router.post('/upload_pdf', auth, upload.single('pdf'), async (req, res) => {
         const { text } = await pdf(buffer);
         fs.unlinkSync(req.file.path);
 
-        const transito = lerJson('transito_local.json', {});
-        const linhas = text.split('\n');
-        let encontrados = 0;
+        // Este leitor era de uma geração anterior: gravava em transito_local.json e
+        // respondia { ok, encontrados }. A tela de Envio Full faz "if (d.numero)" antes
+        // de cadastrar, então o upload passava sem criar envio e sem erro visível —
+        // parecia que o PDF não tinha sido recebido. Agora segue o formato da Flavia.
+        const linhas = text.split('\n').map(l => l.trim());
 
-        for (const linha of linhas) {
-            const m = linha.match(/SKU[:\s]+([A-Za-z0-9\-]+).*?(\d+)/i);
-            if (m) {
-                const sku = m[1].toLowerCase();
-                const qty = parseInt(m[2]);
-                // anos do nome do produto (ex: "2008 2009 2010") não são quantidades
-                if (qty >= 1990 && qty <= 2040) continue;
-                transito[sku] = { quantidade: qty, envio: req.body.numero || '' };
-                encontrados++;
+        // Número do frete — "Frete #70594904"
+        const mNumero = text.match(/Frete\s*#(\d+)/i);
+        if (!mNumero) return res.status(400).json({ erro: 'Número do frete não encontrado no PDF' });
+        const numero = mNumero[1];
+
+        // Total de unidades
+        const mTotal = text.match(/Total de unidades[:\s]+(\d+)/i);
+        const totalUnidades = mTotal ? parseInt(mTotal[1]) : 0;
+
+        // SKUs em ordem — "SKU:" no fim da linha, valor SKU na próxima linha não-vazia.
+        // A mesma linha traz o "Código ML" (inventory_id), que é ÚNICO por produto:
+        //   "Código ML: ZPDN46840 Código universal: N/A SKU:"
+        const skusOrdem = [];
+        const codigosOrdem = [];
+        const codigoDaLinha = l => {
+            const m = String(l).match(/C[oó]digo\s*ML\s*:\s*([A-Za-z0-9]+)/i);
+            return m ? m[1].toUpperCase() : null;
+        };
+        for (let i = 0; i < linhas.length; i++) {
+            if (/SKU:\s*$/i.test(linhas[i])) {
+                for (let j = i + 1; j < linhas.length; j++) {
+                    if (linhas[j]) {
+                        skusOrdem.push(linhas[j].toLowerCase());
+                        codigosOrdem.push(codigoDaLinha(linhas[i]));
+                        break;
+                    }
+                }
+            } else {
+                const m = linhas[i].match(/SKU:\s+(\S+)\s*$/i);
+                if (m) {
+                    skusOrdem.push(m[1].toLowerCase());
+                    codigosOrdem.push(codigoDaLinha(linhas[i]));
+                }
             }
         }
 
-        salvarJson('transito_local.json', transito);
-        res.json({ ok: true, encontrados });
+        // Quantidades — após cabeçalho da tabela (pode ser "PRODUTOUNIDADES" sem espaços)
+        const tabelaIdx = linhas.findIndex(l => /PRODUTO.{0,5}UNIDADES/i.test(l));
+        const qtds = [];
+        if (tabelaIdx >= 0) {
+            for (let i = tabelaIdx + 1; i < linhas.length; i++) {
+                const m = linhas[i].match(/^(\d+)(\s|•|$)/);
+                if (m) {
+                    const n = parseInt(m[1]);
+                    // anos do nome do produto (ex: "2008 2009 2010") não são quantidades
+                    if (n >= 1990 && n <= 2040) continue;
+                    qtds.push(n);
+                }
+                if (qtds.length >= skusOrdem.length) break;
+            }
+        }
+
+        const skus = {};
+        const codigos = {};
+        skusOrdem.forEach((sku, i) => {
+            if (qtds[i] === undefined) return;
+            skus[sku] = (skus[sku] || 0) + qtds[i];
+            const cod = codigosOrdem[i];
+            if (cod) codigos[cod] = (codigos[cod] || 0) + qtds[i];
+        });
+        // Só entrega "codigos" se TODOS os itens tiverem código. Parcial seria pior que
+        // nada: o cálculo usa código quando existe e ignoraria os itens sem ele.
+        const todosComCodigo = skusOrdem.length > 0 &&
+            codigosOrdem.slice(0, skusOrdem.length).every(Boolean);
+
+        res.json({
+            numero,
+            unidades: totalUnidades,
+            recebido: 0,
+            skus: Object.keys(skus).length ? skus : null,
+            codigos: todosComCodigo && Object.keys(codigos).length ? codigos : null,
+        });
 
     } catch (err) {
         res.status(500).json({ erro: err.message });
