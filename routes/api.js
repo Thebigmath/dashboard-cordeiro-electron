@@ -513,11 +513,13 @@ router.post('/atualizar', auth, async (req, res) => {
         // do ML — o "estoque" dele é quantidade declarada no anúncio, que não pode ser
         // reposta nem enviada. Manter esses produtos na base só polui a tela e faz o
         // usuário planejar envio de algo que não existe no FULL.
+        // Fora do FULL o produto continua na base, mas sem reposição: não há galpão do
+        // ML para repor. O "estoque" dele é a quantidade declarada no anúncio, que é
+        // outra coisa. A tela só os mostra na categoria "Fora do Full", para não poluir
+        // o uso diário — são ~500 anúncios na Flavia e ~300 na Cordeiro.
         const totalAntesFiltro = Object.keys(porSku).length;
-        for (const [k, d] of Object.entries(porSku)) {
-            if (!d.eFull) delete porSku[k];
-        }
-        escrever(`Somente FULL: ${Object.keys(porSku).length} de ${totalAntesFiltro} produtos (${totalAntesFiltro - Object.keys(porSku).length} sem inventory_id descartados)`);
+        const qtdForaDoFull = Object.values(porSku).filter(d => !d.eFull).length;
+        escrever(`FULL: ${totalAntesFiltro - qtdForaDoFull} produtos | fora do FULL: ${qtdForaDoFull} (na base, sem reposição)`);
 
         const duplicidadesEvitadas = [];
         const reposicao = Object.values(porSku).map(d => {
@@ -586,7 +588,10 @@ router.post('/atualizar', auth, async (req, res) => {
             // consumo de estoque que não existe, e inflava a compra em quem está com pouco
             // estoque.
             const estoqueNaChegada = Math.max(0, d.estoque - vdm * diasAteChegar);
-            const rep = Math.max(0, Math.ceil(vdm * diasAlvo - estoqueNaChegada - emTransito));
+            // Fora do FULL não há reposição a calcular: sem galpão, não há o que repor lá.
+            const rep = d.eFull
+                ? Math.max(0, Math.ceil(vdm * diasAlvo - estoqueNaChegada - emTransito))
+                : 0;
             const { _itemIds, ...rest } = d;   // não persistir metadata interna
             // "sku" é só rótulo e pode repetir entre produtos diferentes. "chave" é o
             // identificador único — sem ela o frontend reagrupa e soma vendas de itens distintos.
@@ -617,9 +622,12 @@ router.post('/atualizar', auth, async (req, res) => {
         }
 
         // Curva ABC por faturamento30 (critério: receita acumulada)
-        const totalFat = reposicao.reduce((s, p) => s + p.faturamento30, 0);
+        // Só os do FULL entram na curva: incluir os de fora deslocaria os limites A/B/C
+        // e reclassificaria produtos que não mudaram em nada.
+        const paraAbc = reposicao.filter(p => p.eFull);
+        const totalFat = paraAbc.reduce((s, p) => s + p.faturamento30, 0);
         if (totalFat > 0) {
-            const ordenados = [...reposicao].sort((a, b) => b.faturamento30 - a.faturamento30);
+            const ordenados = [...paraAbc].sort((a, b) => b.faturamento30 - a.faturamento30);
             let acum = 0;
             for (const p of ordenados) {
                 acum += p.faturamento30;
