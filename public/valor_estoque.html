@@ -3,13 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Valor do Estoque — Dashboard ML</title>
+    <title>Valor do Estoque — Dashboard Cordeiro</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
     <link href="assets/css/style.css" rel="stylesheet">
     <style>
         body { opacity:0; transform:translateY(10px); transition:opacity .38s cubic-bezier(.22,1,.36,1), transform .38s cubic-bezier(.22,1,.36,1); }
-        body.page-ready { opacity:1; transform:translateY(0); }
+        /* transform: none e obrigatorio aqui. Qualquer transform no body, ate
+           translateY(0), faz o body virar bloco-recipiente e position:fixed
+           passa a se ancorar nele em vez da janela — era o que prendia o
+           painel de selecao no rodape da pagina em vez de deixa-lo flutuando. */
+        body.page-ready { opacity:1; transform:none; }
         .stat-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:16px; margin-bottom:24px; }
         .stat-card { background:var(--s1); border:1px solid var(--sep); border-radius:12px; padding:20px; }
         .stat-label { font-size:11px; text-transform:uppercase; color:var(--l3); margin-bottom:6px; letter-spacing:.5px; }

@@ -34,7 +34,7 @@ async function renderizarGraficoFaturamento() {
             return `
                 <rect class="fat-bar" x="${x}" y="${y}" width="${barW}" height="${h}" rx="3"
                     data-mes="${d.mes}" data-valor="${fmt(d.valor)}" data-atual="${mesAtual}"
-                    fill="${mesAtual ? '#1a9e3f' : 'rgba(26,158,63,0.35)'}"
+                    fill="${mesAtual ? 'var(--blue)' : 'color-mix(in srgb, var(--blue) 35%, transparent)'}"
                     style="cursor:pointer;transition:fill .15s"/>
                 <text x="${x + barW/2}" y="${H - 6}" text-anchor="middle"
                     font-size="9" fill="var(--l3)" style="pointer-events:none">${d.mes}</text>`;
@@ -52,7 +52,7 @@ async function renderizarGraficoFaturamento() {
             rect.addEventListener('mouseenter', () => {
                 tooltip.innerHTML = `<span style="color:var(--l3)">${rect.dataset.mes}&nbsp;</span><strong style="color:var(--l1)">${rect.dataset.valor}</strong>`;
                 tooltip.style.display = 'block';
-                rect.style.fill = '#1a9e3f';
+                rect.style.fill = 'var(--blue)';
             });
             rect.addEventListener('mousemove', (e) => {
                 const box = el.getBoundingClientRect();
@@ -63,7 +63,7 @@ async function renderizarGraficoFaturamento() {
             });
             rect.addEventListener('mouseleave', () => {
                 tooltip.style.display = 'none';
-                rect.style.fill = rect.dataset.atual === 'true' ? '#1a9e3f' : 'rgba(26,158,63,0.35)';
+                rect.style.fill = rect.dataset.atual === 'true' ? 'var(--blue)' : 'color-mix(in srgb, var(--blue) 35%, transparent)';
             });
         });
     } catch {
@@ -213,6 +213,12 @@ function isEmpilhadeira(p) {
     return KEYWORDS_EMPILHADEIRA.some(k => t.includes(k)) || s.startsWith('bf');
 }
 
+// Retrovisor sai pelo titulo: o SKU nao tem prefixo proprio (1102, 2208, 4424...)
+// e divide a mesma faixa numerica com lanternas e tapetes.
+function isRetrovisor(p) {
+    return (p.titulo || '').toLowerCase().includes('retrovisor');
+}
+
 function detectarMarca(titulo) {
     const t = (titulo || '').toLowerCase();
     for (const m of MARCAS_CONHECIDAS) {
@@ -294,10 +300,14 @@ function aplicarFiltros() {
     // base antiga não têm o campo eFull — o "!== false" os mantém visíveis.
     if (filtroCategoria === 'forafull') {
         lista = lista.filter(p => p.eFull === false);
+    } else if (filtroCategoria === 'estrela') {
+        // estrela e lista de acompanhamento: mostra dentro e fora do Full
+        lista = lista.filter(p => window.estrelas.has(chaveDe(p)));
     } else {
         lista = lista.filter(p => p.eFull !== false);
-        if (filtroCategoria === 'empilhadeira') lista = lista.filter(p => isEmpilhadeira(p));
-        else if (filtroCategoria === 'outros')  lista = lista.filter(p => !isEmpilhadeira(p));
+        if (filtroCategoria === 'empilhadeira')    lista = lista.filter(p => isEmpilhadeira(p));
+        else if (filtroCategoria === 'retrovisor') lista = lista.filter(p => isRetrovisor(p));
+        else if (filtroCategoria === 'outros')     lista = lista.filter(p => !isEmpilhadeira(p));
     }
 
     if (textoPesquisa) lista = lista.filter(p =>
@@ -435,6 +445,7 @@ function renderPagina(lista, pagina) {
     tabela.innerHTML = fatia.map(p => `
         <tr data-sku="${p.sku}" data-chave="${chaveDe(p)}"${window.selecionados.has(chaveDe(p)) ? ' class="linha-sel"' : ''}>
             <td class="col-sel"><input type="checkbox" class="sel-check sel-linha" data-chave="${chaveDe(p)}"${window.selecionados.has(chaveDe(p)) ? ' checked' : ''}></td>
+            <td class="col-estrela"><button type="button" class="btn-estrela${window.estrelas.has(chaveDe(p)) ? ' ativo' : ''}" data-chave="${chaveDe(p)}" title="${window.estrelas.has(chaveDe(p)) ? 'Remover dos produtos estrela' : 'Marcar como produto estrela'}"><i class="bi bi-star${window.estrelas.has(chaveDe(p)) ? '-fill' : ''}"></i></button></td>
             <td>${badgeUrgencia(p)}</td>
             <td>${p.titulo}${p.curvaAbc ? ` <span class="badge-abc badge-abc-${p.curvaAbc.toLowerCase()}">${p.curvaAbc}</span>` : ''}</td>
             <td>${p.sku}</td>
@@ -483,6 +494,107 @@ window.irPagina = function(p) {
     document.getElementById('paginacaoReposicaoTopo')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 };
 
+/* ── Painel de seleção flutuante ─────────────────────────────── */
+// O painel nascia preso no canto inferior direito e tapava as ultimas linhas da
+// tabela. Arrastando pelo cabecalho ele vira janela flutuante; a posicao fica no
+// localStorage e e reencaixada quando a janela diminui.
+const POS_PAINEL = 'painelSelecaoPos';
+
+function aplicarPosicaoPainel(painel) {
+    let pos = null;
+    try { pos = JSON.parse(localStorage.getItem(POS_PAINEL) || 'null'); } catch {}
+    if (!pos) return;
+    const larg = painel.offsetWidth  || 250;
+    const alt  = painel.offsetHeight || 200;
+    painel.style.left   = Math.min(Math.max(0, pos.left), Math.max(0, innerWidth  - larg)) + 'px';
+    painel.style.top    = Math.min(Math.max(0, pos.top),  Math.max(0, innerHeight - alt))  + 'px';
+    painel.style.right  = 'auto';
+    painel.style.bottom = 'auto';
+}
+
+function tornarArrastavel(painel) {
+    let dx = 0, dy = 0, arrastando = false;
+
+    painel.addEventListener('pointerdown', e => {
+        if (!e.target.closest('.ps-topo')) return;   // so o cabecalho arrasta
+        const r = painel.getBoundingClientRect();
+        dx = e.clientX - r.left;
+        dy = e.clientY - r.top;
+        arrastando = true;
+        painel.classList.add('arrastando');
+        try { painel.setPointerCapture(e.pointerId); } catch {}
+        e.preventDefault();
+    });
+
+    painel.addEventListener('pointermove', e => {
+        if (!arrastando) return;
+        painel.style.left   = Math.min(Math.max(0, e.clientX - dx), innerWidth  - painel.offsetWidth)  + 'px';
+        painel.style.top    = Math.min(Math.max(0, e.clientY - dy), innerHeight - painel.offsetHeight) + 'px';
+        painel.style.right  = 'auto';
+        painel.style.bottom = 'auto';
+    });
+
+    const soltar = e => {
+        if (!arrastando) return;
+        arrastando = false;
+        painel.classList.remove('arrastando');
+        try { painel.releasePointerCapture(e.pointerId); } catch {}
+        localStorage.setItem(POS_PAINEL, JSON.stringify({
+            left: parseFloat(painel.style.left) || 0,
+            top:  parseFloat(painel.style.top)  || 0,
+        }));
+    };
+    painel.addEventListener('pointerup', soltar);
+    painel.addEventListener('pointercancel', soltar);
+
+    // duplo clique no cabecalho devolve o painel ao canto
+    painel.addEventListener('dblclick', e => {
+        if (!e.target.closest('.ps-topo')) return;
+        localStorage.removeItem(POS_PAINEL);
+        painel.style.left = painel.style.top = painel.style.right = painel.style.bottom = '';
+    });
+}
+
+addEventListener('resize', () => {
+    const p = document.getElementById('painel-selecao');
+    if (p && p.style.left) aplicarPosicaoPainel(p);
+});
+
+/* ── Produtos estrela ───────────────────────────────────────── */
+// Lista de acompanhamento do usuario, gravada no servidor (estrelas.json).
+// Salva com atraso para nao disparar um POST por clique numa marcacao em serie.
+window.estrelas = new Set();
+let timerEstrelas = null;
+
+function salvarEstrelas() {
+    clearTimeout(timerEstrelas);
+    timerEstrelas = setTimeout(() => {
+        fetch('/api/estrelas', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ chaves: [...window.estrelas] }),
+        }).catch(() => {});
+    }, 400);
+}
+
+function atualizarContadorEstrelas() {
+    const el = document.querySelector('.cat-filter-btn[data-cat="estrela"] .cat-contador');
+    if (el) el.textContent = window.estrelas.size || '';
+}
+
+window.toggleEstrela = function(chave, botao) {
+    if (window.estrelas.has(chave)) window.estrelas.delete(chave);
+    else                            window.estrelas.add(chave);
+    const ativo = window.estrelas.has(chave);
+    botao.classList.toggle('ativo', ativo);
+    botao.querySelector('i').className = ativo ? 'bi bi-star-fill' : 'bi bi-star';
+    botao.title = ativo ? 'Remover dos produtos estrela' : 'Marcar como produto estrela';
+    salvarEstrelas();
+    atualizarContadorEstrelas();
+    // na aba Estrela a linha desmarcada deixa de pertencer a lista
+    if (filtroCategoria === 'estrela') aplicarFiltros();
+};
+
 /* ── Seleção de produtos ────────────────────────────────────────────────── */
 function sincronizarSelecaoUI() {
     const n = window.selecionados.size;
@@ -499,6 +611,8 @@ function sincronizarSelecaoUI() {
         painel = document.createElement('div');
         painel.id = 'painel-selecao';
         document.body.appendChild(painel);
+        tornarArrastavel(painel);
+        aplicarPosicaoPainel(painel);
         painel.addEventListener('click', e => {
             const acao = e.target.closest('[data-acao]')?.dataset.acao;
             if (acao === 'filtrar') { apenasSelecionados = !apenasSelecionados; paginaAtual = 1; aplicarFiltros(); }
@@ -515,7 +629,7 @@ function sincronizarSelecaoUI() {
         if (p) unidades += Number(window.qtdsFull[c] ?? qtdFullSugerida(p)) || 0;
     });
     painel.innerHTML = `
-        <div class="ps-topo"><i class="bi bi-check2-square"></i> ${n} produto${n > 1 ? 's' : ''} selecionado${n > 1 ? 's' : ''}</div>
+        <div class="ps-topo" title="Arraste para mover · duplo clique volta ao canto"><i class="bi bi-check2-square"></i> <span class="ps-topo-txt">${n} produto${n > 1 ? 's' : ''} selecionado${n > 1 ? 's' : ''}</span><i class="bi bi-grip-vertical ps-grip"></i></div>
         <div class="ps-num"><strong>${unidades}</strong><span>unidades a enviar</span></div>
         <button class="ps-btn ps-primario" data-acao="filtrar"><i class="bi bi-funnel"></i> ${apenasSelecionados ? 'Mostrar todos' : 'Mostrar apenas selecionados'}</button>
         <button class="ps-btn" data-acao="planilha"><i class="bi bi-file-earmark-arrow-down"></i> Gerar planilha dos selecionados</button>
@@ -585,9 +699,13 @@ window.toggleAvisoSku = function () {
 /* ── Carregar JSON ──────────────────────────────────────────────────────── */
 function carregarProdutos() {
     // deduplica por SKU somando estoque e vendas30
-    fetch('/api/dados')
-        .then(r => r.json())
-        .then(resp => {
+    Promise.all([
+        fetch('/api/dados').then(r => r.json()),
+        fetch('/api/estrelas').then(r => r.ok ? r.json() : []).catch(() => []),
+    ])
+        .then(([resp, estrelas]) => {
+            window.estrelas = new Set(estrelas);
+            atualizarContadorEstrelas();
             const raw = resp.produtos || resp;
             if (resp.transito) window.transitoMap = resp.transito;
             if (resp.transito_por_chave) window.transitoPorChave = resp.transito_por_chave;
@@ -626,7 +744,7 @@ function carregarProdutos() {
             fetch('/api/avisos_sku').then(r => r.json()).then(renderAvisosSku).catch(() => {});
         })
         .catch(() => {
-            if (tabela) tabela.innerHTML = '<tr><td colspan="10" class="text-center text-danger py-4">Erro ao carregar dados.</td></tr>';
+            if (tabela) tabela.innerHTML = '<tr><td colspan="12" class="text-center text-danger py-4">Erro ao carregar dados.</td></tr>';
         });
 }
 
@@ -773,6 +891,11 @@ if (tabela) {
         const tr = cb.closest('tr');
         if (tr) tr.classList.toggle('linha-sel', cb.checked);
         sincronizarSelecaoUI();
+    });
+
+    tabela.addEventListener('click', e => {
+        const b = e.target.closest('.btn-estrela');
+        if (b) window.toggleEstrela(b.dataset.chave, b);
     });
 }
 const selTodosEl = document.getElementById('selTodos');
