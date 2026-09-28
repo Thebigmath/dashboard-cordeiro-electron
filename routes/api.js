@@ -13,6 +13,7 @@ const perguntas = require('../lib/perguntas');
 const parados = require('../lib/parados');
 const feed = require('../lib/feed');
 const seven = require('../lib/seven');
+const astra = require('../lib/astra');
 const rankingMt = require('../lib/ranking_mt');
 const mercado = require('../lib/mercado');
 const nubimetrics = require('../lib/nubimetrics');
@@ -1136,6 +1137,8 @@ router.post('/seven/recarregar', auth, (req, res) => {
 router.get('/seven/ranking_ml/estado', auth, (req, res) => res.json(rankingMt.estado()));
 router.post('/seven/ranking_ml/coletar', auth, (req, res) => res.json(rankingMt.iniciar('manual')));
 router.get('/seven/ranking_ml/historico', auth, (req, res) => res.json(rankingMt.historico(20)));
+router.get('/seven/astra/estado', auth, (req, res) => res.json(astra.estado()));
+router.post('/seven/astra/rodar', auth, (req, res) => res.json(astra.iniciar((req.body && req.body.grupos) || [])));
 router.get('/seven/planilha', auth, (req, res) => {
     seven.planilha(req.query.tipo === 'concorrentes' ? 'concorrentes' : 'vendas').then(({ nome, buffer }) => {
         res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
