@@ -1144,6 +1144,7 @@ router.get('/feed/assinatura', auth, (req, res) => {
 
 // ── Seven: noticias, vendas de ontem e concorrentes ─────────────────────────
 const erroJson = (res) => (e) => res.status(500).json({ erro: String(e.message || e) });
+router.get('/inicio/faturamento', auth, (req, res) => { require('../lib/inicio').resumo(req.query.forcar === '1').then(d => res.json(d)).catch(erroJson(res)); });
 router.get('/seven/feed', auth, (req, res) => { seven.feedSeven().then(d => res.json(d)).catch(erroJson(res)); });
 router.get('/seven/noticias', auth, (req, res) => { seven.noticias().then(d => res.json(d)).catch(erroJson(res)); });
 router.get('/seven/vendas', auth, (req, res) => { seven.tabelaVendas(false).then(d => res.json(d)).catch(erroJson(res)); });
@@ -1157,6 +1158,18 @@ router.post('/seven/recarregar', auth, (req, res) => {
 router.get('/seven/ranking_ml/estado', auth, (req, res) => res.json(rankingMt.estado()));
 router.post('/seven/ranking_ml/coletar', auth, (req, res) => res.json(rankingMt.iniciar('manual')));
 router.get('/seven/ranking_ml/historico', auth, (req, res) => res.json(rankingMt.historico(20)));
+// Primeira abertura do dia do AD HEALTH: a tela pergunta se ja atualizou hoje
+// (horario de Brasilia) e, se nao, roda a atualizacao completa e marca o dia.
+const ABERTURA_DIA = 'adhealth_abertura.json';
+const hojeBR = () => new Date(Date.now() - 3 * 3600 * 1000).toISOString().slice(0, 10);
+router.get('/seven/abertura', auth, (req, res) => {
+    const a = lerJson(ABERTURA_DIA, {});
+    res.json({ hoje: hojeBR(), atualizado_dia: a.dia || null, precisa: a.dia !== hojeBR() });
+});
+router.post('/seven/abertura/feito', auth, (req, res) => {
+    salvarJson(ABERTURA_DIA, { dia: hojeBR(), em: new Date().toISOString() });
+    res.json({ ok: true });
+});
 router.get('/seven/astra/estado', auth, (req, res) => res.json(astra.estado()));
 router.post('/seven/astra/rodar', auth, (req, res) => res.json(astra.iniciar((req.body && req.body.grupos) || [])));
 // ---- Análise com IA (Ollama na própria máquina: sem chave de API e nada sai daqui) ----
