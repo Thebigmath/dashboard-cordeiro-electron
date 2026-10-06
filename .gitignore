@@ -6,3 +6,7 @@ storage/transito_local.json
 
 storage/ultima_atualizacao.txt
 *.log
+
+# Seguranca (06/10/2026): nada da pasta de dados vai para o GitHub, exceto o config de exemplo sem segredo
+storage/*
+!storage/config.json
