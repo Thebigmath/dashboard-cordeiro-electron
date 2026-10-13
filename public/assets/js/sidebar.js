@@ -147,7 +147,11 @@
         root.classList.add('sem-transicao');
         root.setAttribute('data-theme', t);
         void root.offsetHeight;
-        requestAnimationFrame(() => root.classList.remove('sem-transicao'));
+        // rAF não dispara com a janela minimizada ou em segundo plano; sem o
+        // respaldo por tempo a classe ficaria presa e mataria todas as animações.
+        const liberar = () => root.classList.remove('sem-transicao');
+        requestAnimationFrame(liberar);
+        setTimeout(liberar, 150);
 
         const icone = document.getElementById('iconeTema');
         if (icone) icone.className = t === 'dark' ? 'bi bi-sun-fill' : 'bi bi-moon-stars-fill';

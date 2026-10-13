@@ -60,6 +60,14 @@
         .gv-num .v { font-size:15px; font-weight:600; color:var(--l1); margin-top:2px; }
         .gv-acoes { display:flex; gap:8px; margin-top:12px; flex-wrap:wrap; }
         .gv-link { font-size:12px; color:var(--blue); text-decoration:none; display:inline-flex; align-items:center; gap:5px; }
+        .btn-mercado { font-size:12px; padding:5px 12px; border-radius:7px; border:1px solid var(--sep); background:none; color:var(--l1); cursor:pointer; display:inline-flex; align-items:center; gap:6px; }
+        .btn-mercado:hover { border-color:var(--blue); color:var(--blue); }
+        .btn-mercado:disabled { opacity:.55; cursor:default; }
+        .mercado { margin-top:12px; font-size:12px; color:var(--l2); border-top:1px solid var(--sep); padding-top:10px; }
+        .mercado .vd { font-weight:600; margin-bottom:6px; }
+        .mercado .vd.ruim { color:#FF9F0A; } .mercado .vd.neutro { color:var(--l2); }
+        .mercado .mini { display:flex; gap:14px; flex-wrap:wrap; color:var(--l3); font-size:11px; }
+        .mercado .fonte { font-size:10px; color:var(--l3); margin-top:6px; }
         .legenda { display:flex; gap:14px; font-size:11px; color:var(--l3); }
         .legenda i { display:inline-block; width:10px; height:10px; border-radius:3px; margin-right:4px; vertical-align:-1px; }
         .opcoes { display:flex; gap:10px; align-items:center; flex-wrap:wrap; font-size:12px; color:var(--l2); }
@@ -252,6 +260,10 @@ function abrir(id) {
                         ${p.link ? `<a class="gv-link" href="${esc(p.link)}" target="_blank" rel="noopener"><i class="bi bi-box-arrow-up-right"></i> ver anúncio</a>` : ''}
                         <span class="gv-link" style="color:var(--l3)"><i class="bi bi-upc"></i> ${esc(p.item_id)}</span>
                     </div>
+                    <div class="gv-acoes">
+                        <button class="btn-mercado" id="bm-${esc(id)}" onclick="verMercado('${esc(id)}')"><i class="bi bi-bar-chart-line"></i> Ver o mercado (Nubimetrics)</button>
+                    </div>
+                    <div class="mercado" id="mk-${esc(id)}" style="display:none"></div>
                 </div>
             </div>`;
         desenhar(id);
@@ -259,6 +271,45 @@ function abrir(id) {
 }
 
 let porId = {};
+
+// Consulta o Nubimetrics SO deste produto, e so quando o usuario pede. A cota e
+// por token e compartilhada com os outros projetos: puxar a lista inteira
+// bloquearia todo mundo por uma hora.
+async function verMercado(id) {
+    const b = document.getElementById('bm-' + id), el = document.getElementById('mk-' + id);
+    if (!b || !el) return;
+    b.disabled = true;
+    b.innerHTML = '<i class="bi bi-hourglass-split"></i> consultando...';
+    el.style.display = '';
+    el.innerHTML = '<span style="color:var(--l3)">buscando no Nubimetrics (o motor espaça as consultas para não bloquear a conta)...</span>';
+    try {
+        const m = await fetch('/api/parados/mercado?item=' + encodeURIComponent(id)).then(r => r.json());
+        if (m.bloqueado) {
+            el.innerHTML = `<div class="vd" style="color:#ff453a">Nubimetrics bloqueado</div><div class="mini">${esc(m.erro || '')}</div>`;
+        } else if (m.erro && !m.anuncios) {
+            el.innerHTML = `<div class="mini" style="color:#ff453a">${esc(m.erro)}</div>`;
+        } else if (m.vazio) {
+            el.innerHTML = `<div class="vd neutro">Nenhum anúncio parecido encontrado no mercado</div><div class="fonte">busca: "${esc(m.busca)}"</div>`;
+        } else {
+            const f = (v) => v == null ? '—' : brl(v);
+            el.innerHTML = `
+                <div class="vd ${esc(m.cor)}">${esc(m.veredito)}</div>
+                <div class="mini">
+                    <span>${m.anuncios} anúncios no mercado</span>
+                    <span>${m.vendendo} vendendo</span>
+                    <span>${m.vendas_mercado} un em 30 d</span>
+                    <span>preço ${f(m.preco_min)} – ${f(m.preco_max)} (mediana ${f(m.preco_mediana)})</span>
+                    ${m.mais_baratos_que_nos != null ? `<span>${m.mais_baratos_que_nos} mais baratos que nós</span>` : ''}
+                    <span>${m.no_full} no Full</span>
+                </div>
+                <div class="fonte">busca: "${esc(m.busca)}"${m.doCache ? ` · do cache, ${m.idade_min} min` : ''}${m.vencido ? ' (dado antigo: ' + esc(m.aviso || '') + ')' : ''}</div>`;
+        }
+    } catch (e) {
+        el.innerHTML = `<div class="mini" style="color:#ff453a">Falhou: ${esc(e.message)}</div>`;
+    }
+    b.disabled = false;
+    b.innerHTML = '<i class="bi bi-arrow-clockwise"></i> consultar de novo';
+}
 function desenhar(id) {
     const p = porId[id], cv = document.getElementById('cv-' + id); if (!p || !cv || cv.dataset.pronto) return;
     charts = charts.filter(c => c.canvas && document.body.contains(c.canvas) || (c.destroy(), false));
