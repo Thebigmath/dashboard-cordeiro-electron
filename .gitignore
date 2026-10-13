@@ -10,3 +10,4 @@ storage/ultima_atualizacao.txt
 # Seguranca (06/10/2026): nada da pasta de dados vai para o GitHub, exceto o config de exemplo sem segredo
 storage/*
 !storage/config.json
+dist_pub/
