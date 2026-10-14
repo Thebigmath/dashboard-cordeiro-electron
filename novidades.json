@@ -1,5 +1,13 @@
 [
   {
+    "versao": "1.6.90",
+    "data": "2026-10-14",
+    "titulo": "Agenda do Full",
+    "texto": "- Agenda do Full (STOCK Ops): todos os envios Full da conta, horários livres por galpão (os que o ML oferece para cada envio) e vigias que avisam na hora em que a vaga abre (aviso do Windows com som), com botão \"Abrir no ML\".\n- Conexão pela extensão \"SEVEN · Agenda do Full (Cordeiro)\" no Chrome em que a conta já está logada.\n- Fase de testes: o botão Confirmar está desligado; nada é marcado sozinho.",
+    "imagens": [],
+    "video": ""
+  },
+  {
     "versao": "1.6.89",
     "data": "2026-10-14",
     "titulo": "A IA do SEVEN se chama Cris",
