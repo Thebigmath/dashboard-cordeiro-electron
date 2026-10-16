@@ -1,6 +1,6 @@
 {
   "name": "dashboard-cordeiro",
-  "version": "1.6.102",
+  "version": "1.6.103",
   "description": "Dashboard ML - Controle de Estoque Cordeiro Car",
   "main": "main.js",
   "scripts": {
