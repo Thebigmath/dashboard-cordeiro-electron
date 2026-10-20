@@ -1,5 +1,11 @@
 [
   {
+    "versao": "1.6.114",
+    "data": "2026-10-20",
+    "titulo": "Liberações: busca as vendas sozinho",
+    "texto": "- Finance → Liberações aparecia zerado em computadores onde o Resultado do mês (DRE) nunca tinha sido coletado: a página só lia as vendas já coletadas.\n- Agora o botão Atualizar do Mercado Pago primeiro lê as vendas do mês (e do mês anterior, se faltar) e depois relê as liberações. Mostra a etapa enquanto roda.\n- Ao abrir a página num computador sem nenhuma venda coletada, a atualização começa sozinha (alguns minutos na primeira vez).\n- Também passam a entrar as vendas feitas depois da última coleta do DRE."
+  },
+  {
     "versao": "1.6.113",
     "data": "2026-10-20",
     "titulo": "Liberações do Mercado Pago no Finance",
