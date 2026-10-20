@@ -1,5 +1,11 @@
 [
   {
+    "versao": "1.6.115",
+    "data": "2026-10-20",
+    "titulo": "Liberações em segundos",
+    "texto": "- Finance → Liberações: o botão Atualizar do Mercado Pago agora faz uma única busca no Mercado Pago pela data de liberação (de 45 dias atrás até 60 dias à frente). Leva segundos, em vez de minutos, e não depende mais da coleta do Resultado do mês (DRE).\n- Ao abrir a página, atualiza sozinho se a última atualização tiver mais de 30 minutos.\n- Vendas que o DRE ainda não leu aparecem com o título do anúncio (o SKU aparece depois que o mês é coletado no DRE)."
+  },
+  {
     "versao": "1.6.114",
     "data": "2026-10-20",
     "titulo": "Liberações: busca as vendas sozinho",

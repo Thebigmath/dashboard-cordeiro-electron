@@ -212,8 +212,8 @@ async function acompanhar() {
     else { b.innerHTML = '<i class="bi bi-arrow-repeat"></i> Atualizar do Mercado Pago'; if (e.erro) $('notaFiltro').textContent = 'Erro ao atualizar: ' + e.erro; if (b.dataset.r) { delete b.dataset.r; carregar(); } }
     return e;
 }
-// maquina sem nenhuma venda coletada: ja busca sozinho
-(async () => { await carregar(); const e = await acompanhar(); if (D && !(D.atualizado || []).length && e && !e.rodando) atualizar(); })();
+// busca rapida no MP (segundos): sozinha ao abrir se nunca rodou ou tem mais de 30 min
+(async () => { await carregar(); const e = await acompanhar(); if (D && (!D.rapido_em || Date.now() - Date.parse(D.rapido_em) > 30 * 60000) && e && !e.rodando) atualizar(); })();
 document.body.classList.add('page-ready');
 </script>
 <script src="/assets/js/sidebar.js"></script>
