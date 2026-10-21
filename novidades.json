@@ -1,5 +1,11 @@
 [
   {
+    "versao": "1.6.117",
+    "data": "2026-10-21",
+    "titulo": "Motor Nexus (Bling)",
+    "texto": "- Motor Nexus (interno): integração com o Bling (API v3) com renovação automática do token, compartilhada com o app da Flavia sem risco de as duas renovarem ao mesmo tempo. Base para a ponte Bling → Olist. Sem tela nova por enquanto."
+  },
+  {
     "versao": "1.6.116",
     "data": "2026-10-21",
     "titulo": "Conciliação do Finance corrigida",
