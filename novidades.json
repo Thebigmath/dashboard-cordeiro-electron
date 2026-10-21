@@ -1,5 +1,11 @@
 [
   {
+    "versao": "1.6.116",
+    "data": "2026-10-21",
+    "titulo": "Conciliação do Finance corrigida",
+    "texto": "- Finance → Conciliação: pedidos em que o comprador teve um pagamento recusado antes do aprovado (cartão negado) apareciam como \"retidos\" mesmo com o dinheiro já liberado. Agora as tentativas recusadas/canceladas são ignoradas: em setembro, os retidos caíram de R$ 3.892,79 (17) para R$ 80,65 (1) e o liberado subiu na mesma medida.\n- O mesmo pedido podia entrar duas vezes na coleta do mês; agora fica um por pedido (setembro: 103 cancelados e estornados, R$ 30.739,02, igual ao Mercado Livre e ao Mercado Pago).\n- Para ver os números corrigidos de um mês já coletado, clique em Atualizar o mês."
+  },
+  {
     "versao": "1.6.115",
     "data": "2026-10-20",
     "titulo": "Liberações em segundos",
