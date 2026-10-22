@@ -1,5 +1,11 @@
 [
   {
+    "versao": "1.6.118",
+    "data": "2026-10-22",
+    "titulo": "Contas a pagar, Conciliação única e Custos e Despesas",
+    "texto": "- Finance → Planilha avançada: o cálculo de impostos passa a usar a base tributária do contador (ICMS e DIFAL por estado, PIS/COFINS por produto), igual ao app da Flavia. Esta conta continua no Simples; a troca de regime, se um dia precisar, é na Planilha avançada (alterar).\n- Finance → Planilha avançada: cada SKU mostra a regra de impostos que usa (base, NCM ou sem regra), e o botão buscar NCM no Olist completa os SKUs que ainda estão fora da base.\n- Finance → Liberações passa a se chamar Contas a receber, e o DRE vai direto para a Conciliação única: o que caiu no Mercado Pago, pedido a pedido.\n- Finance → Contas a pagar (novo): as contas lançadas no Bling, com vencimento, fornecedor e situação (vence hoje, atrasada, paga), e 3 resumos de IA do fluxo de caixa.\n- Custos e Despesas: cada lançamento agora é fixo ou variável, e o DRE mostra os dois separados.\n- Para o Bling ler as contas a pagar, o app NEXUS ENGINE precisa receber os escopos Contas a pagar, Contas a receber, Contatos, Formas de pagamento e Categorias financeiras; depois é preciso autorizar de novo."
+  },
+  {
     "versao": "1.6.117",
     "data": "2026-10-21",
     "titulo": "Motor Nexus (Bling)",
