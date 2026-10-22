@@ -1,5 +1,11 @@
 [
   {
+    "versao": "1.6.121",
+    "data": "2026-10-22",
+    "titulo": "Saldo do Mercado Pago (Plano A)",
+    "texto": "- Saldo do Mercado Pago: nova pagina \"Saldo Mercado Pago\" com saldo oficial (relatorio de liberacoes) atualizado 2x por dia e saldo estimado atualizado a cada 3 minutos (vendas liberadas + devolucoes).\n- Guarda do MP liberada para os endpoints do relatorio de liberacoes (POST + download do arquivo).\n- Limitacao: saques e pagamentos feitos com o saldo so entram na proxima ancora."
+  },
+  {
     "versao": "1.6.119",
     "data": "2026-10-22",
     "titulo": "Bling até 3 vezes mais rápido",
