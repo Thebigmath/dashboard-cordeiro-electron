@@ -1,0 +1,10 @@
+{
+  "client_id": "https://raw.githubusercontent.com/Thebigmath/dashboard-cordeiro-electron/master/belvo-client.json",
+  "client_name": "SEVEN (Cordeiro Car e Flavia Stock)",
+  "client_uri": "https://github.com/Thebigmath/dashboard-cordeiro-electron",
+  "grant_types": ["urn:ietf:params:oauth:grant-type:device_code", "refresh_token"],
+  "response_types": ["code"],
+  "token_endpoint_auth_method": "none",
+  "scope": "openid profile email offline_access",
+  "redirect_uris": ["http://127.0.0.1:3002/api/finance/belvo/callback"]
+}
