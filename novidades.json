@@ -1,11 +1,5 @@
 [
   {
-    "versao": "1.6.145",
-    "data": "2026-10-29",
-    "titulo": "Custos atualizados: retrovisores sem custo fechados",
-    "texto": "- Custos atualizados pelo Mercado Turbo (planilha de 29/10): 7 custos mudaram e 18 entraram novos, fechando os mesmos retrovisores da Flavia que ainda estavam sem custo. Falta só o TAP-250 sem custo no Full."
-  },
-  {
     "versao": "1.6.144",
     "data": "2026-10-28",
     "titulo": "Clonagem: campo SKU deixa de travar depois de várias clonagens",
