@@ -79,7 +79,6 @@ app.get('/finance-liberacoes', (req, res) => res.sendFile(path.join(__dirname, '
 app.get('/finance-conciliacao', (req, res) => res.sendFile(path.join(__dirname, 'public/finance_conciliacao.html')));
 app.get('/finance-planilha', (req, res) => res.sendFile(path.join(__dirname, 'public/finance_planilha.html')));
 app.get('/finance', (req, res) => res.sendFile(path.join(__dirname, 'public/finance.html')));
-app.get('/mt-teste', (req, res) => res.sendFile(path.join(__dirname, 'public/mt_teste.html')));
 app.get('/anuncios', (req, res) => res.sendFile(path.join(__dirname, 'public/anuncios.html')));
 // a tela antiga de Parados esta em standby (dependia da ponte do Nubimetrics): vai para o Controle de estoque parado
 app.get('/parados', (req, res) => res.redirect('/seven#parados'));

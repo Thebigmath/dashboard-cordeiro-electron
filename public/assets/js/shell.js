@@ -32,12 +32,9 @@
             ['/finance#resumo', 'bi-clipboard-data', 'Resultado do mês (DRE)'], ['/finance-conciliacao', 'bi-arrow-left-right', 'Conciliação'],
             ['/finance#produtos', 'bi-box', 'Margem por produto'], ['/finance-planilha', 'bi-table', 'Planilha avançada'], ['/finance-liberacoes', 'bi-calendar-check', 'Contas a receber'], ['/finance-contas-pagar', 'bi-receipt', 'Contas a pagar'], ['/finance-saldo-mp', 'bi-wallet2', 'Saldo Mercado Pago'], ['/finance-fluxo-caixa', 'bi-graph-up-arrow', 'Fluxo de caixa'], ['/finance-extrato', 'bi-bank', 'Extrato do banco'], ['/finance#custos', 'bi-wallet2', 'Custos e Despesas'],
             ['/finance#notas', 'bi-file-earmark-pdf', 'Notas de fornecedores']] },
-        // MT - Teste (31/10/2026): as funcoes do Mercado Turbo dentro do SEVEN, fora do AD HEALTH por enquanto
-        mt: { nome: 'MT - Teste', curto: 'MT', sub: 'No molde do Mercado Turbo', icone: 'bi-speedometer', itens: [
-            ['/mt-teste', 'bi-clipboard-data', 'Resumo Financeiro']] },
     };
     const caminho = location.pathname.replace(/\/$/, '') || '/';
-    const appDaPagina = caminho === '/mt-teste' ? 'mt' : ['/finance','/finance-planilha', '/finance-conciliacao', '/finance-liberacoes', '/finance-contas-pagar', '/finance-saldo-mp', '/finance-fluxo-caixa', '/finance-extrato'].includes(caminho) ? 'fin' : ['/seven', '/reputacao', '/anuncios'].includes(caminho) ? 'ad' : ['/painel', '/feed', '/envio_full', '/agenda-full', '/erp-commander', '/metricas-stock', '/valor_estoque', '/frete', '/parados', '/stock-ops'].includes(caminho) ? 'stock' : null;
+    const appDaPagina = ['/finance', '/finance-planilha', '/finance-conciliacao', '/finance-liberacoes', '/finance-contas-pagar', '/finance-saldo-mp', '/finance-fluxo-caixa', '/finance-extrato'].includes(caminho) ? 'fin' : ['/seven', '/reputacao', '/anuncios'].includes(caminho) ? 'ad' : ['/painel', '/feed', '/envio_full', '/agenda-full', '/erp-commander', '/metricas-stock', '/valor_estoque', '/frete', '/parados', '/stock-ops'].includes(caminho) ? 'stock' : null;
     let aberto = appDaPagina;   // app mostrado na segunda aba
     let info = {};
 
