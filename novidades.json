@@ -1,5 +1,11 @@
 [
   {
+    "versao": "1.6.147",
+    "data": "2026-11-02",
+    "titulo": "Anúncios: Precificador do anúncio (calculadora ao lado do preço)",
+    "texto": "- AD HEALTH > Anúncios: o botão com a calculadora ao lado do preço abre o Precificador de Anúncio, no molde do Mercado Turbo. Clássico e Premium lado a lado, cada um com o seu valor de venda; frete, imposto, tarifa e margem de contribuição recalculam enquanto você digita.\n- Custo e imposto podem ser mudados ali para simular; o botão \"Salvar custo e imposto no SKU\" grava na planilha de custos e vale em todo o SEVEN.\n- \"Aplicar este preço\" grava o preço no Mercado Livre (abre com \"Só simular\" ligado; acima de 20% de mudança pede confirmação). Na outra coluna, \"Alterar para Premium/Clássico\" abre a troca de modalidade."
+  },
+  {
     "versao": "1.6.146",
     "data": "2026-11-02",
     "titulo": "Anúncios no AD HEALTH e MT - Teste (no molde do Mercado Turbo)",

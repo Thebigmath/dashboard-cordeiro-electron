@@ -134,6 +134,18 @@
         .cp-col label { font-size:12px; color:var(--l2); display:block; margin-bottom:3px; } .cp-col .sel { width:100%; }
         .cp-lista { border:1px solid var(--sep); border-radius:9px; max-height:150px; overflow:auto; padding:4px 8px; font-size:12.5px; background:var(--s2); }
         .cp-lista label { display:flex; gap:6px; align-items:center; color:var(--l1); margin:2px 0; font-size:12.5px; cursor:pointer; }
+        .pc-cols { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+        .pc-col { border-radius:14px; padding:14px 16px; background:var(--s2); border:1px solid var(--sep); }
+        .pc-col.atual { background:color-mix(in srgb,#0a84ff 8%,var(--s2)); }
+        .pc-col h4 { display:flex; align-items:center; gap:6px; font-size:14px; font-weight:700; margin:0 0 10px; color:var(--l1); }
+        .pc-col h4 .exp { margin-left:auto; font-size:10.5px; background:#5e3a8c; color:#fff; border-radius:999px; padding:2px 8px; }
+        .pc-campo { margin:0 auto 8px; max-width:240px; } .pc-campo label { font-size:12.5px; color:var(--l2); display:block; margin-bottom:3px; }
+        .pc-campo .in { width:100%; text-align:right; } .pc-campo .in:disabled { opacity:.65; }
+        .pc-dup { display:grid; grid-template-columns:1.4fr 1fr; gap:6px; max-width:240px; margin:0 auto 8px; } .pc-dup .in { width:100%; text-align:right; } .pc-dup .in:disabled { opacity:.65; }
+        .pc-mc { background:var(--s1); border:1px solid var(--sep); border-radius:12px; text-align:center; padding:12px; margin-top:10px; }
+        .pc-mc .v { font-size:26px; font-weight:800; } .pc-mc .p { font-size:13px; font-weight:700; }
+        .pc-mc .pos { color:#30d158; } .pc-mc .neg { color:#ff453a; }
+        .bt-calc { border:1px solid color-mix(in srgb,#bf5af2 40%,var(--sep)); background:color-mix(in srgb,#bf5af2 14%,transparent); color:#bf5af2; border-radius:9px; width:36px; display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:16px; }
         .tab-mov { width:100%; border-collapse:collapse; font-size:13px; }
         .tab-mov th { text-align:left; font-size:11.5px; color:var(--l3); padding:6px 8px; border-bottom:1px solid var(--sep); }
         .tab-mov td { padding:8px; border-bottom:1px solid rgba(128,128,128,.12); color:var(--l1); }
@@ -351,6 +363,20 @@
         <div class="rod" style="align-items:center"><label class="chip" style="cursor:pointer;margin-right:auto"><input type="checkbox" id="cpSimular" checked> Só simular (não grava no Mercado Livre)</label><span id="cpBotoes"></span></div>
     </div>
 </div>
+<div class="modal-an largo" id="mPrec" hidden onclick="if(event.target===this)this.hidden=true">
+    <div class="box">
+        <div style="display:flex;align-items:center"><h3><i class="bi bi-calculator"></i> Precificador de Anúncio</h3><button class="ic" style="margin-left:auto;font-size:18px" onclick="$('mPrec').hidden=true">&times;</button></div>
+        <div class="mprod"><img id="pcFoto" alt=""><div><div id="pcTit" style="color:var(--l1)"></div><small id="pcInfo"></small></div></div>
+        <div class="pc-cols" id="pcCols"></div>
+        <div class="nota" id="pcNota"></div>
+        <div class="msg" id="pcMsg"></div>
+        <div class="rod" style="align-items:center;flex-wrap:wrap">
+            <label class="chip" style="cursor:pointer;margin-right:auto"><input type="checkbox" id="pcSimular" checked> Só simular (não grava no Mercado Livre)</label>
+            <button class="bt" id="pcSalvarSku" hidden onclick="salvarSkuPrec()"><i class="bi bi-cash-coin"></i> Salvar custo e imposto no SKU</button>
+            <button class="bt" onclick="$('mPrec').hidden=true">Fechar</button>
+        </div>
+    </div>
+</div>
 <div class="modal-an largo" id="mDesc" hidden onclick="if(event.target===this)this.hidden=true">
     <div class="box">
         <div style="display:flex;align-items:center;margin-bottom:10px"><h3><i class="bi bi-text-left"></i> Descrição</h3><button class="ic" style="margin-left:auto;font-size:18px" onclick="$('mDesc').hidden=true">&times;</button></div>
@@ -513,7 +539,8 @@ function direita(i, d) {
     const carregando = '<span class="cinza">…</span>';
     const mc = !d ? carregando : d.mc == null ? `<span class="cinza" title="${i.custo == null ? 'SKU sem custo na planilha de custos' : 'Sem tarifa ou frete do ML'}">${i.custo == null ? 'sem custo' : '—'}</span>`
         : `<span class="m ${d.mc < 0 ? 'neg' : 'pos'}">${brl(d.mc)} <small>(${num(d.mc_pct)}%)</small></span>`;
-    return `<div class="preco"><span class="p">${brl(i.preco)}</span>${i.preco_original ? `<s>${brl(i.preco_original)}</s>` : ''}<span class="sep">|</span>${mc}</div>
+    return `<div style="display:flex;gap:8px;align-items:stretch"><div class="preco" style="flex:1"><span class="p">${brl(i.preco)}</span>${i.preco_original ? `<s>${brl(i.preco_original)}</s>` : ''}<span class="sep">|</span>${mc}</div>
+        <button class="bt-calc" title="Precificador do anúncio: simular preço, custo e imposto no Clássico e no Premium" data-id="${esc(i.id)}" onclick="abrirPrec(this.dataset.id)"><i class="bi bi-calculator"></i></button></div>
         <div class="mini"><div>Tarifa de Venda: ${d ? (d.tarifa == null ? '—' : brl(d.tarifa) + (d.tarifa_pct != null ? ` (${num(d.tarifa_pct)}%)` : '')) : '…'}</div><div>Frete: ${d ? (d.frete == null ? '—' : brl(d.frete)) : '…'}</div>
             <div>${esc(i.logistica)}</div><div class="${i.frete_gratis ? 'fg' : ''}">${i.frete_gratis ? '<i class="bi bi-truck"></i> Frete Grátis' : 'Frete pago pelo comprador'}</div></div>
         <div class="cmini">${i.custo == null ? '<span style="color:#ff9f0a">Sem custo na planilha</span>' : `Custo ${brl(i.custo)}`}${d && d.imposto != null ? ` · Imposto ${brl(d.imposto)} (${num(d.imposto_pct)}%)` : ''}</div>
@@ -1102,6 +1129,93 @@ async function replicarCp() {
     const alvos = [...document.querySelectorAll('.cpDest:checked')].map(c => c.value).concat((($('cpOutros').value || '').toUpperCase().match(/MLB\d+/g) || [])).filter(x => x !== cpDados.id);
     if (!alvos.length) { cpMsg('<span class="res-erro">Marque ou digite pelo menos um anúncio de destino.</span>'); return; }
     await enviarAdicionar(alvos, cpDados.vinculos.map(v => v.produto), $('cpSimular').checked, 'replicar');
+}
+
+// ---- Precificador do anuncio (calculadora ao lado do preco): Classico e Premium, cada um no seu preco; custo e imposto valem para os dois
+let pcId = null, pcD = null, pcTimer = null, pcSeq = 0;
+async function abrirPrec(id) {
+    const it = dados.itens.find(x => x.id === id) || {};
+    pcId = id; pcD = null;
+    $('pcFoto').src = it.foto || ''; $('pcTit').textContent = it.titulo || id; $('pcInfo').textContent = `SKU: ${it.sku || '—'} · ${id} · Preço Atual: ${brl(it.preco)}`;
+    $('pcCols').innerHTML = '<div class="cinza">Lendo tarifa e frete no Mercado Livre…</div>'; $('pcMsg').innerHTML = ''; $('pcNota').innerHTML = ''; $('pcSimular').checked = true; $('pcSalvarSku').hidden = true; $('mPrec').hidden = false;
+    await calcPrec({});
+}
+async function calcPrec(corpo) {
+    const seq = ++pcSeq;
+    try {
+        const r = await postJ('/api/ad/precificar', { id: pcId, ...corpo }); if (r.erro) throw new Error(r.erro);
+        if (seq !== pcSeq) return;   // chegou uma conta mais nova
+        const primeira = !pcD; pcD = r;
+        if (primeira) desenharPrec(); else atualizarPrec();
+    } catch (e) { if (seq === pcSeq) $('pcMsg').innerHTML = `<span class="res-erro">${esc(e.message)}</span>`; }
+}
+function colPrec(k, nome, ic) {
+    const c = pcD[k], atual = pcD.tipo_atual === c.tipo;
+    return `<div class="pc-col ${atual ? 'atual' : ''}"><h4><i class="bi ${ic}" style="color:${k === 'classico' ? '#0a84ff' : '#bf5af2'}"></i> ${nome}${atual ? `<span class="exp">${pcD.diamante ? 'Diamante · ' : ''}Exposição Atual</span>` : ''}</h4>
+        <div class="pc-campo"><label>Valor de Venda</label><input class="in" id="pc_${k}_preco" value="${num(c.preco)}" oninput="mudouPrec()" onfocus="this.select()"></div>
+        <div class="pc-campo"><label>Frete (-)</label><input class="in" id="pc_${k}_frete" disabled></div>
+        <div class="pc-campo"><label>Custo (-)</label><input class="in pc-custo" value="${pcD.custo == null ? '' : num(pcD.custo)}" placeholder="sem custo" oninput="sincPrec(this,'pc-custo')"></div>
+        <label class="sub" style="display:block;max-width:240px;margin:0 auto 3px">Imposto (-)</label>
+        <div class="pc-dup"><input class="in" id="pc_${k}_imp" disabled><input class="in pc-imp" value="${num(pcD.imposto_pct)}" oninput="sincPrec(this,'pc-imp')" title="% de imposto"></div>
+        <label class="sub" style="display:block;max-width:240px;margin:0 auto 3px">Tarifa de Venda (-)</label>
+        <div class="pc-dup"><input class="in" id="pc_${k}_tar" disabled><input class="in" id="pc_${k}_tarp" disabled></div>
+        <div class="pc-mc"><div class="sub">Margem de Contribuição (=)</div><div class="v" id="pc_${k}_mc"></div><div class="p" id="pc_${k}_mcp"></div></div>
+        <div class="nota" id="pc_${k}_av" style="color:#ff9f0a"></div>
+        <div style="text-align:center;margin-top:10px">${atual ? `<button class="bt pri" id="pc_${k}_ap" onclick="aplicarPrec('${k}')"><i class="bi bi-check2"></i> Aplicar este preço</button>`
+            : `<button class="bt" onclick="$('mPrec').hidden=true;abrirModalidade(pcId)"><i class="bi bi-gem"></i> Alterar para ${nome}</button>`}</div></div>`;
+}
+function desenharPrec() {
+    $('pcCols').innerHTML = colPrec('classico', 'Clássico', 'bi-tag-fill') + colPrec('premium', 'Premium', 'bi-gem');
+    atualizarPrec();
+}
+function atualizarPrec() {
+    for (const k of ['classico', 'premium']) {
+        const c = pcD[k];
+        $(`pc_${k}_frete`).value = pcD.frete == null ? '—' : brl(pcD.frete);
+        $(`pc_${k}_imp`).value = brl(c.imposto);
+        $(`pc_${k}_tar`).value = c.tarifa == null ? '—' : brl(c.tarifa); $(`pc_${k}_tarp`).value = c.tarifa_pct == null ? '—' : num(c.tarifa_pct) + '%';
+        const mc = $(`pc_${k}_mc`), mp = $(`pc_${k}_mcp`);
+        if (c.mc == null) { mc.className = 'v'; mc.innerHTML = '<span class="cinza" style="font-size:15px">' + (pcD.custo == null ? 'informe o custo' : 'sem tarifa ou frete do ML') + '</span>'; mp.textContent = ''; }
+        else { const cl = c.mc < 0 ? 'neg' : 'pos'; mc.className = 'v ' + cl; mp.className = 'p ' + cl; mc.textContent = (c.mc < 0 ? '-' : '') + brl(Math.abs(c.mc)); mp.textContent = `(${num(c.mc_pct)} %)`; }
+        $(`pc_${k}_av`).textContent = c.aviso_frete || '';
+        const ap = $(`pc_${k}_ap`); if (ap) { const mudou = Math.abs(c.preco - pcD.preco_atual) >= 0.005; ap.disabled = !mudou; ap.innerHTML = `<i class="bi bi-check2"></i> ${mudou ? `Aplicar ${brl(c.preco)}` : 'Preço atual'}`; }
+    }
+    const custoMudou = pcD.custo != null && (pcD.custo_planilha == null || Math.abs(pcD.custo - pcD.custo_planilha) >= 0.005);
+    const impMudou = Math.abs(pcD.imposto_pct - (pcD.imposto_sku ?? pcD.imposto_conta)) >= 0.005;
+    $('pcSalvarSku').hidden = !(pcD.sku && (custoMudou || impMudou));
+    $('pcNota').innerHTML = `Custo ${pcD.custo_planilha == null ? '<b>sem custo na planilha</b>' : 'da planilha: ' + brl(pcD.custo_planilha)} · Imposto ${pcD.imposto_sku != null ? `do SKU: ${num(pcD.imposto_sku)}%` : `da conta: ${num(pcD.imposto_conta)}%`}. Mudar custo ou imposto aqui só simula; para valer em todo o SEVEN, use "Salvar custo e imposto no SKU".`;
+}
+function sincPrec(el, cls) { document.querySelectorAll('.' + cls).forEach(x => { if (x !== el) x.value = el.value; }); mudouPrec(); }
+function mudouPrec() {
+    clearTimeout(pcTimer);
+    pcTimer = setTimeout(() => calcPrec({ classico: lerBR($('pc_classico_preco').value), premium: lerBR($('pc_premium_preco').value),
+        custo: lerBR(document.querySelector('.pc-custo').value), imposto: lerBR(document.querySelector('.pc-imp').value) }), 450);
+}
+async function aplicarPrec(k, confirmarGrande) {
+    const preco = pcD[k].preco, simular = $('pcSimular').checked;
+    $('pcMsg').innerHTML = `<span class="cinza">${simular ? 'Simulando…' : 'Alterando o preço no Mercado Livre…'}</span>`;
+    try {
+        const r = await postJ('/api/ad/precificar/aplicar', { id: pcId, preco, simular, confirmarGrande: !!confirmarGrande });
+        if (!r.ok && r.precisa_confirmar) { $('pcMsg').innerHTML = `<span class="res-erro">${esc(r.erro)}</span> <button class="bt sm" onclick="aplicarPrec('${k}', true)">Confirmar mesmo assim</button>`; return; }
+        if (!r.ok) throw new Error(r.erro || 'Não deu certo.');
+        if (r.simulado) { $('pcMsg').innerHTML = `<span class="res-ok"><i class="bi bi-check2-circle"></i> Simulado (não gravou): ${brl(r.antes)} → ${brl(r.depois)}. Desligue "Só simular" para aplicar.</span>`; return; }
+        const it = dados.itens.find(x => x.id === pcId); if (it) it.preco = preco;
+        pcD.preco_atual = preco; atualizarPrec(); recarregarUm(pcId);
+        $('pcMsg').innerHTML = `<span class="res-ok"><i class="bi bi-check2-circle"></i> Preço alterado no Mercado Livre: ${brl(r.antes)} → ${brl(r.depois)}.</span>`;
+    } catch (e) { $('pcMsg').innerHTML = `<span class="res-erro">${esc(e.message)}</span>`; }
+}
+async function salvarSkuPrec(forcar) {
+    $('pcMsg').innerHTML = '<span class="cinza">Salvando custo e imposto…</span>';
+    try {
+        const imp = pcD.imposto_sku == null && Math.abs(pcD.imposto_pct - pcD.imposto_conta) < 0.005 ? null : pcD.imposto_pct;
+        const r = await postJ('/api/ad/sku', { sku: pcD.sku, custo: pcD.custo, imposto: imp, forcar: !!forcar });
+        if (!r.ok && r.suspeitos) { $('pcMsg').innerHTML = `<span class="res-erro">${esc(r.erro)}</span> <button class="bt sm" onclick="salvarSkuPrec(true)">Gravar mesmo assim</button>`; return; }
+        if (!r.ok) throw new Error(r.erro || 'Não consegui salvar.');
+        for (const x of dados.itens.filter(x => x.sku && x.sku.toLowerCase() === pcD.sku.toLowerCase())) { x.custo = r.custo; delete det[x.id]; }
+        pcD.custo_planilha = r.custo; pcD.imposto_sku = r.imposto_sku ?? null; atualizarPrec();
+        $('pcMsg').innerHTML = `<span class="res-ok"><i class="bi bi-check2-circle"></i> Custo de ${esc(pcD.sku)} salvo: ${brl(r.custo)}${r.imposto_sku != null ? ` · imposto ${num(r.imposto_sku)}%` : ''}. Vale em todo o SEVEN da Cordeiro.</span>`;
+        carregarDetalhes(filtrados.slice((pagina - 1) * POR_PAGINA, pagina * POR_PAGINA).map(x => x.id));
+    } catch (e) { $('pcMsg').innerHTML = `<span class="res-erro">${esc(e.message)}</span>`; }
 }
 
 // ---- Movimentacao do estoque Full (chip Estoque Full)

@@ -1246,6 +1246,8 @@ router.post('/ad/fotos/salvar', auth, (req, res) => { require('../lib/fotos_anun
 router.post('/ad/fotos/desfazer', auth, (req, res) => { require('../lib/fotos_anuncio').desfazer(String((req.body || {}).id || '')).then(d => res.json(d)).catch(e => res.status(400).json({ ok: false, erro: String(e.message || e) })); });
 // Atributo do SKU (balanca): custo vai para a planilha de custos do SEVEN (custos_guard), imposto para impostos_sku.json
 router.get('/ad/sku', auth, (req, res) => { try { res.json(require('../lib/anuncios_ad').sku(String(req.query.sku || ''))); } catch (e) { res.status(400).json({ erro: String(e.message || e) }); } });
+router.post('/ad/precificar', auth, (req, res) => { require('../lib/anuncios_ad').precificar(req.body || {}).then(d => res.json(d)).catch(e => res.status(400).json({ erro: String(e.message || e) })); });
+router.post('/ad/precificar/aplicar', auth, (req, res) => { require('../lib/anuncios_ad').aplicarPreco(req.body || {}).then(d => res.json(d)).catch(e => res.status(400).json({ ok: false, erro: String(e.message || e) })); });
 router.post('/ad/sku', auth, (req, res) => { try { res.json(require('../lib/anuncios_ad').salvarSku(req.body || {})); } catch (e) { res.status(400).json({ ok: false, erro: String(e.message || e) }); } });
 // MT - Teste: Resumo Financeiro no molde do Mercado Turbo (vendas do periodo com custo, imposto, tarifa, frete e MC)
 router.get('/mt/financeiro', auth, (req, res) => { require('../lib/mt_financeiro').vendas({ de: req.query.de, ate: req.query.ate, forcar: req.query.forcar === '1' }).then(d => res.json(d)).catch(e => res.status(400).json({ erro: String(e.message || e) })); });
