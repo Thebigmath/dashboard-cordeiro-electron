@@ -1,5 +1,11 @@
 [
   {
+    "versao": "1.6.146",
+    "data": "2026-11-02",
+    "titulo": "Anúncios no AD HEALTH e MT - Teste (no molde do Mercado Turbo)",
+    "texto": "- AD HEALTH > Anúncios (novo): todos os anúncios da conta com visitas, filtros, abas (Ativos, Pausados, Finalizados, Em Revisão, FULL), margem por anúncio e chips (Descrição, Flex, Atacado, Estoque Full, EAN, Imagens, Ficha Técnica, Compatibilidades).\n- Custo & Imposto por SKU direto no anúncio: o custo vai para a planilha de custos e vale em todo o SEVEN; o imposto pode ser por SKU.\n- Nivelar anúncios do mesmo SKU (preço pela mesma margem, estoque, descrição, imagens, dimensões) a partir de um anúncio modelo que você escolhe.\n- Menu Ações e Ações Múltiplas: pausar, ativar, finalizar, excluir (digitando EXCLUIR), alterar modalidade, promoções, logística, termos mais pesquisados, avaliações, perguntas, visitas e Tiny (Olist).\n- Fotos: ver, reordenar, trocar a capa, remover e subir fotos novas, com desfazer.\n- Full: movimentação do estoque Fulfillment e impressão de etiquetas (Code 128, 40x25 ou 40x60 mm, 1 ou 2 colunas).\n- Ficha Técnica: editar os atributos nos grupos do Mercado Livre, com Salvar em Massa nos anúncios do mesmo SKU.\n- Compatibilidades: cadastrar por Marca, Modelo, Ano e Versão, gerenciar, remover, informar exceção, replicar para outros anúncios e desfazer.\n- Tudo que grava no Mercado Livre abre com \"Só simular\" ligado: desligue para gravar de verdade.\n- MT - Teste (novo app no menu): Resumo Financeiro no molde do Mercado Turbo e Nivelar Custo & Imposto.\n- Anúncios Diamante passam a ser tarifados como Premium (antes a tarifa vinha zerada e a margem saía maior do que a real)."
+  },
+  {
     "versao": "1.6.144",
     "data": "2026-10-28",
     "titulo": "Clonagem: campo SKU deixa de travar depois de várias clonagens",
