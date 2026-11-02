@@ -1212,6 +1212,44 @@ router.get('/dev/saude', soDev, (req, res) => { require('../lib/dev_saude').veri
 router.get('/seven/regras_preco', auth, (req, res) => { require('../lib/motor_preco').avaliar({ forcar: req.query.forcar === '1' }).then(d => res.json(d)).catch(erroJson(res)); });
 // Analise de vendas (estilo Mercado Turbo): MC% real de cada venda do periodo
 router.get('/seven/vendas_mc', auth, (req, res) => { require('../lib/vendas_mc').analisar({ periodo: req.query.periodo || 'ontem' }).then(d => res.json(d)).catch(erroJson(res)); });
+// AD HEALTH > Anuncios (etapa 1, so leitura): lista com as abas, detalhes da pagina aberta (tarifa, frete, margem) e visitas da conta
+router.get('/ad/anuncios', auth, (req, res) => { require('../lib/anuncios_ad').lista({ forcar: req.query.forcar === '1' }).then(d => res.json(d)).catch(erroJson(res)); });
+router.get('/ad/anuncios/detalhes', auth, (req, res) => { require('../lib/anuncios_ad').detalhes(String(req.query.ids || '').split(',').filter(x => /^MLB\d+$/.test(x)), req.query.forcar === '1').then(d => res.json(d)).catch(erroJson(res)); });
+router.get('/ad/visitas', auth, (req, res) => { require('../lib/anuncios_ad').visitas().then(d => res.json(d)).catch(erroJson(res)); });
+router.get('/ad/anuncios/extras', auth, (req, res) => { require('../lib/anuncios_ad').extras(String(req.query.ids || '').split(',').filter(x => /^MLB\d+$/.test(x)), req.query.forcar === '1').then(d => res.json(d)).catch(erroJson(res)); });
+// Ficha tecnica: atributos editaveis nos grupos do ML; salvar (e salvar em massa no mesmo SKU) com simulacao
+router.get('/ad/ficha', auth, (req, res) => { const id = String(req.query.id || ''); if (!/^MLB\d+$/.test(id)) return res.status(400).json({ erro: 'MLB inválido.' }); require('../lib/ficha_tecnica').ler(id).then(d => res.json(d)).catch(e => res.status(400).json({ erro: String(e.message || e) })); });
+router.post('/ad/ficha', auth, (req, res) => { require('../lib/ficha_tecnica').salvar(req.body || {}).then(d => res.json(d)).catch(e => res.status(400).json({ ok: false, erro: String(e.message || e) })); });
+// Compatibilidades com veiculos: ler, arvore Marca>Modelo>Ano>Versao, buscar, adicionar (este/SKU/replicar), remover, excecao, desfazer
+const compatRota = (fn) => (req, res) => fn(req).then(d => res.json(d)).catch(e => res.status(400).json({ ok: false, erro: String(e.message || e) }));
+router.get('/ad/compat', auth, compatRota(req => { const id = String(req.query.id || ''); if (!/^MLB\d+$/.test(id)) throw new Error('MLB inválido.'); return require('../lib/compatibilidades').ler(id); }));
+router.post('/ad/compat/arvore', auth, compatRota(req => require('../lib/compatibilidades').arvore(req.body || {})));
+router.post('/ad/compat/buscar', auth, compatRota(req => require('../lib/compatibilidades').buscar(req.body || {})));
+router.post('/ad/compat/adicionar', auth, compatRota(req => require('../lib/compatibilidades').adicionar(req.body || {})));
+router.post('/ad/compat/remover', auth, compatRota(req => require('../lib/compatibilidades').remover(req.body || {})));
+router.post('/ad/compat/excecao', auth, compatRota(req => require('../lib/compatibilidades').excecao(req.body || {})));
+router.post('/ad/compat/desfazer', auth, compatRota(req => require('../lib/compatibilidades').desfazer(req.body || {})));
+router.get('/ad/full/movimentacoes', auth, (req, res) => { const q = req.query; require('../lib/anuncios_ad').movimentacoes(String(q.inventario || ''), String(q.de || ''), String(q.ate || '')).then(d => res.json(d)).catch(e => res.status(400).json({ erro: String(e.message || e) })); });
+router.get('/ad/anuncios/descricao', auth, (req, res) => { const id = String(req.query.id || ''); if (!/^MLB\d+$/.test(id)) return res.status(400).json({ erro: 'MLB inválido.' }); require('../lib/anuncios_ad').descricao(id).then(d => res.json(d)).catch(erroJson(res)); });
+// Nivelar Anuncios: iguala os anuncios do mesmo SKU a um modelo (previa antes; aplicar so nos marcados; simular nao grava)
+router.get('/ad/nivelar/grupos', auth, (req, res) => { require('../lib/nivelar').grupos().then(d => res.json(d)).catch(erroJson(res)); });
+router.post('/ad/nivelar/previa', auth, (req, res) => { require('../lib/nivelar').previa(req.body || {}).then(d => res.json(d)).catch(e => res.status(400).json({ erro: String(e.message || e) })); });
+router.post('/ad/nivelar/aplicar', auth, (req, res) => { require('../lib/nivelar').aplicar(req.body || {}).then(d => res.json(d)).catch(e => res.status(400).json({ ok: false, erro: String(e.message || e) })); });
+// Acoes do anuncio (menu Acoes e Acoes Multiplas): status com simulacao e confirmacao, modalidade e informacoes so de leitura
+router.post('/ad/acoes/status', auth, (req, res) => { require('../lib/acoes_anuncio').status(req.body || {}).then(d => res.json(d)).catch(e => res.status(400).json({ ok: false, erro: String(e.message || e) })); });
+router.get('/ad/acoes/modalidade', auth, (req, res) => { const id = String(req.query.id || ''); if (!/^MLB\d+$/.test(id)) return res.status(400).json({ erro: 'MLB inválido.' }); require('../lib/acoes_anuncio').modalidade(id).then(d => res.json(d)).catch(e => res.status(400).json({ erro: String(e.message || e) })); });
+router.post('/ad/acoes/modalidade', auth, (req, res) => { require('../lib/acoes_anuncio').alterarModalidade(req.body || {}).then(d => res.json(d)).catch(e => res.status(400).json({ ok: false, erro: String(e.message || e) })); });
+router.get('/ad/acoes/info', auth, (req, res) => { const id = String(req.query.id || ''); if (!/^MLB\d+$/.test(id)) return res.status(400).json({ erro: 'MLB inválido.' }); require('../lib/acoes_anuncio').info(id, String(req.query.tipo || '')).then(d => res.json(d)).catch(e => res.status(400).json({ erro: String(e.message || e) })); });
+// Fotos do anuncio: galeria (ver, reordenar, remover, subir), com simulacao e desfazer a ultima alteracao
+router.get('/ad/fotos', auth, (req, res) => { const id = String(req.query.id || ''); if (!/^MLB\d+$/.test(id)) return res.status(400).json({ erro: 'MLB inválido.' }); require('../lib/fotos_anuncio').ler(id).then(d => res.json(d)).catch(e => res.status(400).json({ erro: String(e.message || e) })); });
+router.post('/ad/fotos/salvar', auth, (req, res) => { require('../lib/fotos_anuncio').salvar(req.body || {}).then(d => res.json(d)).catch(e => res.status(400).json({ ok: false, erro: String(e.message || e) })); });
+router.post('/ad/fotos/desfazer', auth, (req, res) => { require('../lib/fotos_anuncio').desfazer(String((req.body || {}).id || '')).then(d => res.json(d)).catch(e => res.status(400).json({ ok: false, erro: String(e.message || e) })); });
+// Atributo do SKU (balanca): custo vai para a planilha de custos do SEVEN (custos_guard), imposto para impostos_sku.json
+router.get('/ad/sku', auth, (req, res) => { try { res.json(require('../lib/anuncios_ad').sku(String(req.query.sku || ''))); } catch (e) { res.status(400).json({ erro: String(e.message || e) }); } });
+router.post('/ad/sku', auth, (req, res) => { try { res.json(require('../lib/anuncios_ad').salvarSku(req.body || {})); } catch (e) { res.status(400).json({ ok: false, erro: String(e.message || e) }); } });
+// MT - Teste: Resumo Financeiro no molde do Mercado Turbo (vendas do periodo com custo, imposto, tarifa, frete e MC)
+router.get('/mt/financeiro', auth, (req, res) => { require('../lib/mt_financeiro').vendas({ de: req.query.de, ate: req.query.ate, forcar: req.query.forcar === '1' }).then(d => res.json(d)).catch(e => res.status(400).json({ erro: String(e.message || e) })); });
+router.post('/mt/imposto', auth, (req, res) => { try { res.json(require('../lib/mt_financeiro').salvarImposto(req.body && req.body.pct)); } catch (e) { res.status(400).json({ ok: false, erro: String(e.message || e) }); } });
 // Mudanca em PONTOS de margem: preco para +/-N pontos (botoes do Precificar) e quantos pontos uma mudanca representou
 router.get('/seven/preco/:item/pontos', auth, (req, res) => { require('../lib/pontos').maisPontos(req.params.item, Number(req.query.pontos || 1), req.query.base).then(d => res.json(d)).catch(erroJson(res)); });
 router.get('/seven/preco/:item/delta', auth, (req, res) => { require('../lib/pontos').pontosDaMudanca(req.params.item, req.query.antes, req.query.depois).then(d => res.json(d)).catch(erroJson(res)); });

@@ -15,6 +15,7 @@ let httpServer = null;
 app.use('/api/agenda-full/ext', express.json({ limit: '15mb' }));
 // planilha de estoque do ERP Commander chega em base64
 app.use('/api/olist-estoque/upload/previa', express.json({ limit: '25mb' }));
+app.use('/api/ad/fotos/salvar', express.json({ limit: '60mb' }));   // fotos novas do anuncio vao em base64 (ate 10 MB cada)
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -78,6 +79,8 @@ app.get('/finance-liberacoes', (req, res) => res.sendFile(path.join(__dirname, '
 app.get('/finance-conciliacao', (req, res) => res.sendFile(path.join(__dirname, 'public/finance_conciliacao.html')));
 app.get('/finance-planilha', (req, res) => res.sendFile(path.join(__dirname, 'public/finance_planilha.html')));
 app.get('/finance', (req, res) => res.sendFile(path.join(__dirname, 'public/finance.html')));
+app.get('/mt-teste', (req, res) => res.sendFile(path.join(__dirname, 'public/mt_teste.html')));
+app.get('/anuncios', (req, res) => res.sendFile(path.join(__dirname, 'public/anuncios.html')));
 // a tela antiga de Parados esta em standby (dependia da ponte do Nubimetrics): vai para o Controle de estoque parado
 app.get('/parados', (req, res) => res.redirect('/seven#parados'));
 app.get('/metricas-stock', (req, res) => res.sendFile(path.join(__dirname, 'public/metricas_stock.html')));

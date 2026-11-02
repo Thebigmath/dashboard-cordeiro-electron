@@ -25,16 +25,19 @@
             ['/feed', 'bi-lightning-charge', 'Feed'], ['/envio_full', 'bi-box-seam', 'Envio Full'], ['/agenda-full', 'bi-calendar2-check', 'Agenda do Full'], ['/erp-commander', 'bi-hdd-network', 'ERP Commander'], ['/metricas-stock', 'bi-speedometer2', 'Métricas'],
             ['/valor_estoque', 'bi-pie-chart', 'Valor do Estoque'], ['/seven#parados', 'bi-pause-circle', 'Parados']] },   // Frete: monitor em standby (15/10/2026)
         ad: { nome: 'AD HEALTH', curto: 'AD Health', sub: 'Saúde dos anúncios', icone: 'bi-heart-pulse', itens: [
-            ['/seven#noticias', 'bi-lightning-charge', 'Notícias urgentes'],
+            ['/seven#noticias', 'bi-lightning-charge', 'Notícias urgentes'], ['/anuncios', 'bi-tags', 'Anúncios'],
             ['/seven#concorrentes', 'bi-people', 'Análise de concorrentes'], ['/seven#vendas', 'bi-bar-chart-line', 'Análise por tempo de vendas'],
             ['/seven#ia', 'bi-stars', 'Análise com IA'], ['/reputacao', 'bi-shield-exclamation', 'Reputação (Platinum)'], ['/seven#parados', 'bi-hourglass-split', 'Controle de estoque parado'], ['/seven#clonagem', 'bi-copy', 'Clonagem de anúncios']] },
         fin: { nome: 'Finance', curto: 'Finance', sub: 'O financeiro da conta', icone: 'bi-cash-coin', itens: [
             ['/finance#resumo', 'bi-clipboard-data', 'Resultado do mês (DRE)'], ['/finance-conciliacao', 'bi-arrow-left-right', 'Conciliação'],
             ['/finance#produtos', 'bi-box', 'Margem por produto'], ['/finance-planilha', 'bi-table', 'Planilha avançada'], ['/finance-liberacoes', 'bi-calendar-check', 'Contas a receber'], ['/finance-contas-pagar', 'bi-receipt', 'Contas a pagar'], ['/finance-saldo-mp', 'bi-wallet2', 'Saldo Mercado Pago'], ['/finance-fluxo-caixa', 'bi-graph-up-arrow', 'Fluxo de caixa'], ['/finance-extrato', 'bi-bank', 'Extrato do banco'], ['/finance#custos', 'bi-wallet2', 'Custos e Despesas'],
             ['/finance#notas', 'bi-file-earmark-pdf', 'Notas de fornecedores']] },
+        // MT - Teste (31/10/2026): as funcoes do Mercado Turbo dentro do SEVEN, fora do AD HEALTH por enquanto
+        mt: { nome: 'MT - Teste', curto: 'MT', sub: 'No molde do Mercado Turbo', icone: 'bi-speedometer', itens: [
+            ['/mt-teste', 'bi-clipboard-data', 'Resumo Financeiro']] },
     };
     const caminho = location.pathname.replace(/\/$/, '') || '/';
-    const appDaPagina = ['/finance', '/finance-planilha', '/finance-conciliacao', '/finance-liberacoes', '/finance-contas-pagar', '/finance-saldo-mp', '/finance-fluxo-caixa', '/finance-extrato'].includes(caminho) ? 'fin' : ['/seven', '/reputacao'].includes(caminho) ? 'ad' : ['/painel', '/feed', '/envio_full', '/agenda-full', '/erp-commander', '/metricas-stock', '/valor_estoque', '/frete', '/parados', '/stock-ops'].includes(caminho) ? 'stock' : null;
+    const appDaPagina = caminho === '/mt-teste' ? 'mt' : ['/finance','/finance-planilha', '/finance-conciliacao', '/finance-liberacoes', '/finance-contas-pagar', '/finance-saldo-mp', '/finance-fluxo-caixa', '/finance-extrato'].includes(caminho) ? 'fin' : ['/seven', '/reputacao', '/anuncios'].includes(caminho) ? 'ad' : ['/painel', '/feed', '/envio_full', '/agenda-full', '/erp-commander', '/metricas-stock', '/valor_estoque', '/frete', '/parados', '/stock-ops'].includes(caminho) ? 'stock' : null;
     let aberto = appDaPagina;   // app mostrado na segunda aba
     let info = {};
 

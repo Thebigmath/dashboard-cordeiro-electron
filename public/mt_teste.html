@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MT - Teste · Resumo Financeiro — Dashboard Cordeiro</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
+    <link href="assets/css/style.css" rel="stylesheet">
+    <style>
+        body { opacity:0; transition:opacity .38s cubic-bezier(.22,1,.36,1); }
+        body.page-ready { opacity:1; }
+        .mt { padding:24px 28px 50px; width:100%; box-sizing:border-box; overflow-y:auto; height:100vh; }
+        .topo { display:flex; align-items:flex-start; gap:12px; margin-bottom:14px; }
+        .mt h1 { font-size:24px; font-weight:700; color:var(--l1); margin:0; display:flex; align-items:center; gap:10px; }
+        .tag { font-size:11px; font-weight:700; letter-spacing:.4px; padding:3px 8px; border-radius:999px; background:color-mix(in srgb,#bf5af2 18%,transparent); color:#bf5af2; }
+        .sub { color:var(--l3); font-size:13px; margin-top:4px; }
+        .bt { display:inline-flex; align-items:center; gap:6px; padding:7px 13px; border-radius:9px; border:1px solid var(--sep); background:var(--s2); color:var(--l1); font-size:13px; font-weight:600; cursor:pointer; }
+        .bt.pri { background:#0a84ff; color:#fff; border-color:transparent; } .bt:disabled { opacity:.5; cursor:not-allowed; }
+        .bt.sm { padding:4px 9px; font-size:12px; }
+        .in, .sel { background:var(--s2); border:1px solid var(--sep); color:var(--l1); border-radius:9px; padding:7px 10px; font-size:13px; width:100%; }
+        .grid5 { display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:12px; margin-bottom:12px; }
+        .kc { background:var(--s1); border:1px solid var(--sep); border-radius:14px; padding:14px 16px; border-top:5px solid var(--cor,var(--sep)); min-height:118px; display:flex; flex-direction:column; justify-content:center; }
+        .kc .ti { font-size:13px; color:var(--l2); display:flex; align-items:center; gap:6px; }
+        .kc .vl { font-size:22px; font-weight:800; color:var(--l1); font-variant-numeric:tabular-nums; }
+        .kc .pc { font-size:12px; font-weight:700; color:var(--l2); }
+        .kc .dup { display:flex; justify-content:space-between; gap:10px; }
+        .kc .lado { text-align:right; font-size:12px; color:var(--l3); line-height:1.35; }
+        .kc .lado b { display:block; color:var(--l1); font-size:13.5px; font-variant-numeric:tabular-nums; }
+        .kc.br { border-top-width:1px; }
+        .mods { display:grid; grid-template-columns:repeat(3,1fr); gap:8px 14px; font-size:12px; color:var(--l3); }
+        .mods b { display:block; color:var(--l1); font-size:13px; font-variant-numeric:tabular-nums; }
+        .tog { display:inline-flex; align-items:center; gap:8px; font-size:12px; color:var(--l2); margin-top:8px; cursor:pointer; user-select:none; }
+        .tog input { width:32px; height:18px; }
+        .imp { display:inline-flex; align-items:center; gap:4px; }
+        .imp input { width:58px; padding:2px 6px; font-size:12px; border-radius:7px; border:1px solid var(--sep); background:var(--s2); color:var(--l1); }
+        .linha2 { display:grid; grid-template-columns:minmax(0,2fr) minmax(320px,1fr); gap:12px; margin-bottom:12px; }
+        @media (max-width:1100px) { .linha2 { grid-template-columns:1fr; } }
+        .box { background:var(--s1); border:1px solid var(--sep); border-radius:14px; padding:16px 18px; }
+        .box h3 { font-size:16px; font-weight:700; color:var(--l1); margin:0 0 12px; }
+        .filtros { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px 14px; }
+        .filtros label { font-size:12.5px; color:var(--l2); display:block; margin-bottom:4px; }
+        .dt { display:flex; gap:6px; } .dt .bt { padding:6px 10px; }
+        .chip { display:inline-flex; align-items:center; gap:6px; background:var(--s2); border:1px solid var(--sep); border-radius:8px; padding:5px 10px; font-size:12.5px; color:var(--l1); }
+        .graf { display:flex; align-items:center; gap:18px; flex-wrap:wrap; }
+        .leg div { display:flex; align-items:center; gap:8px; font-size:13px; color:var(--l2); margin:5px 0; }
+        .leg i { width:11px; height:11px; border-radius:50%; display:inline-block; }
+        .leg b { color:var(--l1); margin-left:auto; padding-left:10px; font-variant-numeric:tabular-nums; }
+        .nota { font-size:11px; color:var(--l3); margin-top:8px; }
+        .barra { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin:4px 0 10px; }
+        .tabela { background:var(--s1); border:1px solid var(--sep); border-radius:14px; overflow:auto; max-height:70vh; }
+        table { border-collapse:separate; border-spacing:0; font-size:12.5px; width:max-content; min-width:100%; }
+        th { position:sticky; top:0; z-index:2; background:var(--s1); text-align:right; font-size:11px; color:var(--l2); font-weight:700; padding:10px 10px; border-bottom:1px solid var(--sep); cursor:pointer; user-select:none; white-space:nowrap; }
+        th.t, td.t { text-align:left; } th .bi { font-size:10px; opacity:.6; }
+        th.cu { color:#ff9f0a; } th.im { color:#ff453a; } th.ta { color:#d4b100; } th.fv { color:#0a84ff; }
+        td { padding:8px 10px; border-bottom:1px solid rgba(128,128,128,.10); color:var(--l1); text-align:right; white-space:nowrap; font-variant-numeric:tabular-nums; }
+        td.prod { white-space:normal; min-width:240px; max-width:320px; }
+        td.prod small { display:block; color:var(--l3); font-size:11px; }
+        td.cu { color:#ff9f0a; } td.im { color:#ff453a; } td.ta { color:#d4b100; } td.fv { color:#0a84ff; }
+        td.neg { color:#ff453a; font-weight:700; } td.pos { color:#30D158; font-weight:700; }
+        tr.canc td { opacity:.45; }
+        .pill { font-size:10.5px; font-weight:700; border-radius:999px; padding:1px 7px; background:color-mix(in srgb,#ff453a 16%,transparent); color:#ff453a; margin-left:4px; }
+        .falta { color:#ff9f0a; font-size:11.5px; }
+        .pag { display:flex; gap:6px; align-items:center; justify-content:center; margin:10px 0 4px; font-size:12.5px; color:var(--l3); }
+        .estado { font-size:12.5px; color:var(--l3); margin:0 0 10px; }
+        .estado.erro { color:#ff453a; }
+        .modal-mt { position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:100; display:flex; align-items:center; justify-content:center; padding:24px; }
+        .modal-mt .box { width:min(1100px,100%); max-height:90vh; display:flex; flex-direction:column; overflow:auto; }
+        .modal-mt .tabela { flex:1 0 auto; min-height:240px; max-height:55vh; }
+        .bt.esc { background:#1c2b4a; color:#fff; border-color:transparent; }
+        .nv-in { width:96px; padding:4px 7px; font-size:12.5px; border-radius:7px; border:1px solid var(--sep); background:var(--s2); color:var(--l1); text-align:right; }
+        .nv-in.mudou { border-color:#0a84ff; box-shadow:0 0 0 2px color-mix(in srgb,#0a84ff 25%,transparent); }
+        .nv-in.ruim { border-color:#ff453a; }
+        .sug { font-size:11px; color:#0a84ff; cursor:pointer; display:block; margin-top:2px; }
+        .rodape { display:flex; align-items:center; gap:10px; margin-top:12px; flex-wrap:wrap; }
+        .aviso { font-size:12px; color:var(--l3); }
+        .aviso.erro { color:#ff453a; } .aviso.ok { color:#30D158; }
+    </style>
+<script src="/assets/js/shell.js"></script>
+</head>
+<body>
+<canvas id="canvas-bg"></canvas>
+<div class="aurora"><div class="aur-1"></div><div class="aur-2"></div><div class="aur-3"></div></div>
+<div class="d-flex"><main class="content"><div class="mt">
+    <div class="topo">
+        <div>
+            <h1><i class="bi bi-clipboard-data"></i> Resumo Financeiro <span class="tag">MT - TESTE</span></h1>
+            <div class="sub">Receitas, despesas e margem de contribuição das vendas, no molde do Mercado Turbo. <span id="atualizado"></span></div>
+        </div>
+        <span style="margin-left:auto"></span>
+        <button class="bt" onclick="exportar()"><i class="bi bi-box-arrow-up-right"></i> Exportar</button>
+    </div>
+    <div class="estado" id="estado"></div>
+
+    <div class="grid5" id="cards1"></div>
+    <div class="grid5" id="cards2"></div>
+
+    <div class="linha2">
+        <div class="box">
+            <h3>Filtrar Busca</h3>
+            <div class="filtros">
+                <div><label>Data Início</label><div class="dt"><input type="date" class="in" id="de"><button class="bt" onclick="passo('de',-1)">‹</button><button class="bt" onclick="passo('de',1)">›</button></div></div>
+                <div><label>Data Fim</label><div class="dt"><input type="date" class="in" id="ate"><button class="bt" onclick="passo('ate',-1)">‹</button><button class="bt" onclick="passo('ate',1)">›</button></div></div>
+                <div><label>Nº Pedido / Carrinho</label><input class="in" id="fPedido" oninput="filtrar()"></div>
+                <div><label>Título ou MLB</label><input class="in" id="fTitulo" oninput="filtrar()"></div>
+                <div><label>SKU</label><input class="in" id="fSku" oninput="filtrar()"></div>
+                <div><label>Status Venda</label><select class="sel" id="fStatus" onchange="filtrar()"><option value="">Todos</option><option value="aprovada">Aprovadas</option><option value="cancelada">Canceladas</option></select></div>
+                <div><label>Modalidade</label><select class="sel" id="fMod" onchange="filtrar()"><option value="">Todos</option><option>Full</option><option>Flex</option><option>Places/Coleta</option><option>ME1</option><option>Outros</option></select></div>
+                <div><label>Tipo do Frete</label><select class="sel" id="fFrete" onchange="filtrar()"><option value="">Todos</option><option value="gratis">Frete grátis (comprador não pagou)</option><option value="pago">Comprador pagou frete</option></select></div>
+                <div><label>Custo &amp; Imposto</label><select class="sel" id="fCusto" onchange="filtrar()"><option value="">Todos</option><option value="com">Com custo</option><option value="sem">Sem custo</option></select></div>
+                <div><label>Multicontas</label><span class="chip" id="conta">—</span></div>
+                <div style="display:flex;align-items:flex-end"><button class="bt pri" id="btBuscar" onclick="buscar()"><i class="bi bi-search"></i> Buscar</button></div>
+            </div>
+        </div>
+        <div class="box">
+            <h3>Representação Gráfica</h3>
+            <div class="graf"><div id="donut"></div><div class="leg" id="leg"></div></div>
+            <div class="nota">* O frete pago pelo comprador não entra no gráfico nem no cálculo percentual.</div>
+        </div>
+    </div>
+
+    <div class="barra">
+        <button class="bt esc" onclick="abrirNivelar()"><i class="bi bi-sliders"></i> Nivelar Custo &amp; Imposto</button>
+        <button class="bt" onclick="abrirRanking()"><i class="bi bi-trophy"></i> Ranking de Produtos</button>
+        <span style="margin-left:auto" class="estado" id="contagem"></span>
+    </div>
+    <div class="tabela"><table id="tab"></table></div>
+    <div class="pag" id="pag"></div>
+</div></main></div>
+
+<div class="modal-mt" id="mNivelar" hidden onclick="if(event.target===this)fecharNivelar()">
+    <div class="box">
+        <div style="display:flex;align-items:center;margin-bottom:6px"><h3 style="margin:0"><i class="bi bi-sliders"></i> Nivelar Custo &amp; Imposto</h3><button class="bt sm" style="margin-left:auto" onclick="fecharNivelar()">Fechar</button></div>
+        <div class="aviso" style="margin-bottom:10px">Custo por unidade de cada SKU das vendas da busca atual. Ele vai para a planilha de custos da Cordeiro (com backup antes) e vale para todas as vendas desse SKU, de qualquer período: o SEVEN não guarda custo por venda.</div>
+        <div class="barra" style="margin:0 0 10px">
+            <span class="chip">Imposto da conta <input class="nv-in" id="nvImp" style="width:64px" oninput="desenharNivelar()"> %</span>
+            <label class="tog" style="margin:0"><input type="checkbox" class="form-check-input" id="nvSoSem" onchange="desenharNivelar()"> Só SKUs sem custo</label>
+            <input class="in" id="nvBusca" placeholder="Buscar SKU ou anúncio…" style="width:240px" oninput="desenharNivelar()">
+            <span class="aviso" id="nvConta" style="margin-left:auto"></span>
+        </div>
+        <div class="tabela"><table id="nvTab"></table></div>
+        <div class="rodape">
+            <span class="aviso" id="nvMsg"></span>
+            <span style="margin-left:auto"></span>
+            <button class="bt" id="nvForcar" hidden onclick="salvarNivelar(true)"><i class="bi bi-exclamation-triangle"></i> Gravar mesmo assim</button>
+            <button class="bt pri" id="nvSalvar" onclick="salvarNivelar(false)"><i class="bi bi-check2"></i> Salvar e recalcular</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal-mt" id="mRanking" hidden onclick="if(event.target===this)this.hidden=true">
+    <div class="box">
+        <div style="display:flex;align-items:center;margin-bottom:10px"><h3 style="margin:0"><i class="bi bi-trophy"></i> Ranking de Produtos</h3><span class="estado" style="margin:0 0 0 10px" id="rkInfo"></span><button class="bt sm" style="margin-left:auto" onclick="$('mRanking').hidden=true">Fechar</button></div>
+        <div class="tabela"><table id="rkTab"></table></div>
+    </div>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const num = (v) => Number(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const brl = (v) => v == null ? '—' : 'R$ ' + num(v);
+const pct = (v) => v == null ? '—' : num(v) + '%';
+const r2 = (v) => Math.round(Number(v || 0) * 100) / 100;
+const hoje = () => new Date().toLocaleDateString('sv-SE');
+const dataBR = (s) => { const d = new Date(s); return d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }); };
+
+let dados = null, linhas = [], filtradas = [], impostoPct = 4, pagina = 1, porPagina = 50, ordem = { col: 'data', dir: -1 }, freteComprador = false;
+try { freteComprador = localStorage.getItem('mt_frete_comprador') === '1'; } catch {}
+
+function passo(id, d) {
+    const v = $(id).value || hoje(), dt = new Date(v + 'T12:00:00');
+    dt.setDate(dt.getDate() + d); $(id).value = dt.toLocaleDateString('sv-SE');
+}
+
+async function buscar(forcar) {
+    const de = $('de').value, ate = $('ate').value;
+    $('btBuscar').disabled = true;
+    $('estado').className = 'estado'; $('estado').innerHTML = '<i class="bi bi-hourglass-split"></i> Lendo as vendas no Mercado Livre…';
+    try {
+        const r = await fetch(`/api/mt/financeiro?de=${de}&ate=${ate}${forcar ? '&forcar=1' : ''}`);
+        const j = await r.json();
+        if (!r.ok) throw new Error(j.erro || 'Não consegui ler as vendas.');
+        dados = j; impostoPct = j.imposto_pct;
+        try { localStorage.setItem('mt_periodo', JSON.stringify({ de, ate })); } catch {}
+        $('conta').innerHTML = `<i class="bi bi-person"></i> ${esc(j.conta)}`;
+        $('atualizado').textContent = '· lido em ' + new Date(j.atualizado_em).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+        $('estado').textContent = '';
+        recalcular(); filtrar();
+    } catch (e) {
+        $('estado').className = 'estado erro'; $('estado').textContent = e.message;
+    } finally { $('btBuscar').disabled = false; }
+}
+
+// imposto e MC recalculados aqui: mudar o % nao precisa reler o Mercado Livre
+function recalcular() {
+    linhas = (dados ? dados.linhas : []).map(l => {
+        const imposto = r2(l.base * (l.imposto_sku ?? impostoPct) / 100);   // SKU com imposto proprio (aba Anuncios) mantem o dele
+        const mc = l.custo != null && l.frete_vendedor != null ? r2(l.base - l.custo - imposto - l.tarifa - l.frete_vendedor) : null;
+        return { ...l, imposto, mc, mc_pct: mc != null && l.bruto ? r2(mc / l.bruto * 100) : null };   // linha: sobre o preco cheio, como o MT
+    });
+}
+
+function filtrar() {
+    const ped = $('fPedido').value.trim(), tit = $('fTitulo').value.trim().toLowerCase(), sku = $('fSku').value.trim().toLowerCase();
+    const st = $('fStatus').value, mod = $('fMod').value, fr = $('fFrete').value, cu = $('fCusto').value;
+    filtradas = linhas.filter(l =>
+        (!ped || l.pedido.includes(ped) || l.carrinho.includes(ped)) &&
+        (!tit || l.titulo.toLowerCase().includes(tit) || String(l.item_id).toLowerCase().includes(tit.replace(/^mlb-?/, 'mlb'))) &&
+        (!sku || String(l.sku).toLowerCase().includes(sku)) &&
+        (!st || (st === 'cancelada') === l.cancelada) &&
+        (!mod || l.modalidade === mod) &&
+        (!fr || (fr === 'gratis' ? l.frete_comprador === 0 : l.frete_comprador > 0)) &&
+        (!cu || (cu === 'com') === (l.custo != null)));
+    pagina = 1;
+    desenharResumo(); desenharTabela();
+}
+
+function totais(L) {
+    const ap = L.filter(l => !l.cancelada), ca = L.filter(l => l.cancelada);
+    const soma = (A, k) => r2(A.reduce((t, l) => t + (Number(l[k]) || 0), 0));
+    const t = {
+        aprovadas: soma(ap, 'base'), canceladas: soma(ca, 'base'), frete_c: soma(ap, 'frete_comprador'), frete_v: soma(ap, 'frete_vendedor'),
+        custo: soma(ap, 'custo'), imposto: soma(ap, 'imposto'), tarifa: soma(ap, 'tarifa'), mc: soma(ap.filter(l => l.mc != null), 'mc'),
+        qtd_ap: ap.length, un_ap: ap.reduce((s, l) => s + l.qtd, 0), qtd_ca: ca.length, un_ca: ca.reduce((s, l) => s + l.qtd, 0),
+        sem_custo: ap.filter(l => l.custo == null).length, suspeito: ap.filter(l => l.custo_suspeito).length, mods: {},
+    };
+    for (const m of ['Places/Coleta', 'Flex', 'Full', 'ME1', 'Outros']) t.mods[m] = soma(ap.filter(l => l.modalidade === m), 'base');
+    t.faturamento_ml = r2(t.aprovadas + t.canceladas);
+    t.mc_pct = t.aprovadas ? r2(t.mc / t.aprovadas * 100) : null;
+    return t;
+}
+
+function desenharResumo() {
+    const t = totais(filtradas);
+    const vendas = freteComprador ? r2(t.aprovadas + t.frete_c) : t.aprovadas;
+    const pp = (v) => t.aprovadas ? ` (${num(v / t.aprovadas * 100)}%)` : '';
+    $('cards1').innerHTML = `
+      <div class="kc" style="--cor:#bf5af2"><div class="dup"><div><div class="ti"><i class="bi bi-currency-dollar"></i> Vendas Aprovadas</div><div class="vl">${brl(vendas)}</div></div>
+        <div class="lado">Faturamento ML<b>${brl(t.faturamento_ml)}</b>Vendas Canceladas<b>${brl(t.canceladas)}</b></div></div>
+        <label class="tog"><input type="checkbox" class="form-check-input" ${freteComprador ? 'checked' : ''} onchange="mudarFrete(this.checked)"> Considerar frete comprador</label></div>
+      <div class="kc" style="--cor:#ff9f0a"><div class="dup"><div><div class="ti">Custo &amp; Imposto</div><div class="vl">${brl(r2(t.custo + t.imposto))}</div></div>
+        <div class="lado">Custo<b>${brl(t.custo)}</b>Imposto (${num(impostoPct)}%)<b>${brl(t.imposto)}</b></div></div>
+        <span class="imp tog" style="cursor:default">Imposto da conta <input id="impPct" value="${num(impostoPct)}" title="Imposto da conta, em % da venda"> % <button class="bt sm" onclick="salvarImposto()" title="Salvar o % do imposto"><i class="bi bi-check2"></i></button></span></div>
+      <div class="kc" style="--cor:#ffd60a"><div class="ti">Tarifa de Venda</div><div class="vl">${brl(t.tarifa)}</div><div class="pc">${pp(t.tarifa)}</div></div>
+      <div class="kc" style="--cor:#0a84ff"><div class="dup"><div><div class="ti">Frete Total</div><div class="vl">${brl(r2(t.frete_c + t.frete_v))}</div></div>
+        <div class="lado">Frete Comprador<b>${brl(t.frete_c)}</b>Frete Vendedor<b>${brl(t.frete_v)}</b></div></div></div>
+      <div class="kc" style="--cor:#30d158"><div class="ti">Margem de Contribuição</div><div class="vl" style="color:${t.mc < 0 ? '#ff453a' : 'var(--l1)'}">${brl(t.mc)}</div><div class="pc">(${pct(t.mc_pct)})</div></div>`;
+    $('cards2').innerHTML = `
+      <div class="kc br"><div class="mods">${['Places/Coleta', 'Flex', 'Full', 'ME1', 'Outros'].map(m => `<div>${m}<b>${brl(t.mods[m])}</b></div>`).join('')}<div>Total<b>${brl(t.aprovadas)}</b></div></div></div>
+      <div class="kc br"><div class="dup"><div><div class="ti">Qtd Vendas Aprovadas</div><div class="vl">${t.qtd_ap}</div><div class="pc">(${t.un_ap} unidades)</div></div>
+        <div class="lado">Qtd Total Vendas<b>${t.qtd_ap + t.qtd_ca} (${t.un_ap + t.un_ca} unidades)</b>Qtd Vendas Canceladas<b>${t.qtd_ca} (${t.un_ca} unidade${t.un_ca === 1 ? '' : 's'})</b></div></div></div>
+      <div class="kc br"><div class="ti">Ticket Médio por Venda Aprovada</div><div class="vl">${brl(t.qtd_ap ? r2(t.aprovadas / t.qtd_ap) : 0)}</div></div>
+      <div class="kc br"><div class="ti">Ticket Médio da Margem de Contribuição</div><div class="vl">${brl(t.qtd_ap ? r2(t.mc / t.qtd_ap) : 0)}</div><div class="pc">(${pct(t.mc_pct)})</div></div>
+      <div class="kc br"><div class="ti"><i class="bi bi-exclamation-triangle"></i> Vendas sem custo na planilha</div><div class="vl" style="color:${t.sem_custo ? '#ff9f0a' : 'var(--l1)'}">${t.sem_custo}</div>
+        <div class="pc">${t.sem_custo ? 'ficam fora da margem' : 'todas com custo'}${t.suspeito ? ` · ${t.suspeito} com custo suspeito` : ''}</div></div>`;
+    desenharDonut(t);
+}
+
+function desenharDonut(t) {
+    const fatias = [['Frete', t.frete_v, '#0a84ff'], ['Tarifa', t.tarifa, '#ffd60a'], ['M. Contribuição', t.mc, '#30d158'], ['Custo', t.custo, '#ff9f0a'], ['Imposto', t.imposto, '#ff453a']];
+    const total = t.aprovadas;
+    const R = 80, C = 2 * Math.PI * R;
+    let ac = 0, arcos = '';
+    if (total > 0) for (const [nome, v, cor] of fatias) {
+        if (v <= 0) continue;
+        const f = Math.min(v / total, 1 - ac); if (f <= 0) continue;
+        arcos += `<circle r="${R}" cx="110" cy="110" fill="none" stroke="${cor}" stroke-width="34" stroke-dasharray="${f * C} ${C}" stroke-dashoffset="${-ac * C}" transform="rotate(-90 110 110)"><title>${nome}: ${num(v / total * 100)}%</title></circle>`;
+        ac += f;
+    }
+    $('donut').innerHTML = `<svg width="220" height="220" viewBox="0 0 220 220"><circle r="${R}" cx="110" cy="110" fill="none" stroke="var(--s2)" stroke-width="34"/>${arcos}</svg>`;
+    $('leg').innerHTML = fatias.map(([n, v, c]) => `<div><i style="background:${c}"></i>${n}<b>${total ? num(v / total * 100) + '%' : '—'}</b></div>`).join('');
+}
+
+const COLS = [
+    ['titulo', 'Anúncio', 't'], ['conta', 'Conta', 't'], ['sku', 'SKU', 't'], ['data', 'Data', ''], ['modalidade', 'Frete', 't'], ['valor', 'Valor Unit.', ''], ['qtd', 'Qtd.', ''],
+    ['faturamento', 'Faturamento ML', ''], ['custo', 'Custo (-)', 'cu'], ['imposto', 'Imposto (-)', 'im'], ['tarifa', 'Tarifa de Venda (-)', 'ta'],
+    ['frete_comprador', 'Frete Comprador (-)', ''], ['frete_vendedor', 'Frete Vendedor (-)', 'fv'], ['mc', 'Margem Contrib. (=)', ''], ['mc_pct', 'MC em %', ''],
+];
+function ordenar(col) { ordem = { col, dir: ordem.col === col ? -ordem.dir : (['titulo', 'conta', 'sku', 'modalidade'].includes(col) ? 1 : -1) }; desenharTabela(); }
+
+function desenharTabela() {
+    const { col, dir } = ordem;
+    const L = [...filtradas].sort((a, b) => { const x = a[col], y = b[col]; if (x == null) return 1; if (y == null) return -1; return (typeof x === 'string' ? x.localeCompare(y) : x - y) * dir; });
+    const paginas = Math.max(1, Math.ceil(L.length / porPagina)); if (pagina > paginas) pagina = paginas;
+    const vis = L.slice((pagina - 1) * porPagina, pagina * porPagina);
+    $('tab').innerHTML = `<thead><tr>${COLS.map(([k, n, c]) => `<th class="${c}" onclick="ordenar('${k}')">${n} <i class="bi ${ordem.col === k ? (ordem.dir > 0 ? 'bi-sort-up' : 'bi-sort-down') : 'bi-arrow-down-up'}"></i></th>`).join('')}</tr></thead><tbody>${
+        vis.map(l => `<tr class="${l.cancelada ? 'canc' : ''}">
+            <td class="t prod">${esc(l.titulo)}${l.cancelada ? '<span class="pill">Cancelada</span>' : ''}<small>${esc(l.item_id)} · pedido ${esc(l.pedido)}</small></td>
+            <td class="t">${esc(l.conta)}</td><td class="t">${esc(l.sku) || '<span class="falta">sem SKU</span>'}</td><td>${dataBR(l.data)}</td><td class="t">${esc(l.modalidade)}</td>
+            <td>${num(l.valor)}</td><td>${l.qtd}</td><td>${num(l.faturamento)}</td>
+            <td class="cu">${l.custo == null ? '<span class="falta">sem custo</span>' : num(l.custo)}${l.custo_suspeito ? ' <i class="bi bi-exclamation-triangle falta" title="Custo maior que 1,5x o preço: confira a planilha"></i>' : ''}</td>
+            <td class="im">${num(l.imposto)}</td><td class="ta">${num(l.tarifa)}</td><td>${l.frete_comprador == null ? '—' : num(l.frete_comprador)}</td><td class="fv">${l.frete_vendedor == null ? '—' : num(l.frete_vendedor)}</td>
+            <td class="${l.mc == null ? '' : l.mc < 0 ? 'neg' : 'pos'}">${l.mc == null ? '—' : num(l.mc)}</td><td class="${l.mc_pct == null ? '' : l.mc_pct < 0 ? 'neg' : 'pos'}">${l.mc_pct == null ? '—' : num(l.mc_pct) + '%'}</td></tr>`).join('')
+        || `<tr><td class="t" colspan="${COLS.length}" style="padding:24px;color:var(--l3)">${dados ? 'Nenhuma venda com esses filtros.' : ''}</td></tr>`}</tbody>`;
+    $('contagem').textContent = dados ? `${L.length} de ${linhas.length} registros` : '';
+    $('pag').innerHTML = !L.length ? '' : `<button class="bt sm" onclick="irPara(1)" ${pagina === 1 ? 'disabled' : ''}>«</button><button class="bt sm" onclick="irPara(${pagina - 1})" ${pagina === 1 ? 'disabled' : ''}>‹</button>
+        <span>${pagina} de ${paginas}</span><button class="bt sm" onclick="irPara(${pagina + 1})" ${pagina === paginas ? 'disabled' : ''}>›</button><button class="bt sm" onclick="irPara(${paginas})" ${pagina === paginas ? 'disabled' : ''}>»</button>
+        <select class="sel" style="width:auto" onchange="porPagina=Number(this.value);pagina=1;desenharTabela()">${[25, 50, 100, 200].map(n => `<option ${n === porPagina ? 'selected' : ''}>${n}</option>`).join('')}</select>`;
+}
+function irPara(p) { pagina = p; desenharTabela(); }
+function mudarFrete(v) { freteComprador = v; try { localStorage.setItem('mt_frete_comprador', v ? '1' : '0'); } catch {} desenharResumo(); }
+
+async function salvarImposto() {
+    const v = $('impPct').value;
+    const r = await fetch('/api/mt/imposto', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pct: v.replace(',', '.') }) }).then(x => x.json()).catch(() => ({ ok: false, erro: 'Sem resposta do app.' }));
+    if (!r.ok) { $('estado').className = 'estado erro'; $('estado').textContent = r.erro; return; }
+    impostoPct = r.imposto_pct; $('estado').className = 'estado'; $('estado').textContent = `Imposto da conta salvo: ${num(impostoPct)}%.`;
+    recalcular(); filtrar();
+}
+
+function abrirRanking() {
+    const g = {};
+    for (const l of filtradas.filter(l => !l.cancelada)) {
+        const k = l.item_id || l.titulo, x = (g[k] ||= { titulo: l.titulo, item_id: l.item_id, sku: l.sku, vendas: 0, unidades: 0, faturamento: 0, mc: 0, base_mc: 0, sem_custo: 0 });
+        x.vendas++; x.unidades += l.qtd; x.faturamento += l.base;
+        if (l.mc != null) { x.mc += l.mc; x.base_mc += l.bruto; } else x.sem_custo++;
+    }
+    const L = Object.values(g).sort((a, b) => b.unidades - a.unidades || b.faturamento - a.faturamento);
+    $('rkInfo').textContent = `${L.length} anúncios · vendas aprovadas com os filtros atuais`;
+    $('rkTab').innerHTML = `<thead><tr><th class="t">#</th><th class="t">Anúncio</th><th class="t">SKU</th><th>Vendas</th><th>Unidades</th><th>Faturamento</th><th>Margem Contrib.</th><th>MC em %</th></tr></thead><tbody>${
+        L.map((x, i) => { const p = x.base_mc ? r2(x.mc / x.base_mc * 100) : null; return `<tr><td class="t">${i + 1}</td><td class="t prod">${esc(x.titulo)}<small>${esc(x.item_id)}${x.sem_custo ? ` · ${x.sem_custo} venda(s) sem custo` : ''}</small></td>
+            <td class="t">${esc(x.sku)}</td><td>${x.vendas}</td><td>${x.unidades}</td><td>${num(x.faturamento)}</td><td class="${x.base_mc ? (x.mc < 0 ? 'neg' : 'pos') : ''}">${x.base_mc ? num(x.mc) : '—'}</td><td class="${p == null ? '' : p < 0 ? 'neg' : 'pos'}">${pct(p)}</td></tr>`; }).join('')
+        || '<tr><td class="t" colspan="8" style="padding:24px;color:var(--l3)">Sem vendas aprovadas.</td></tr>'}</tbody>`;
+    $('mRanking').hidden = false;
+}
+
+// ---- Nivelar Custo & Imposto: o custo por SKU vai para a planilha de custos pelo mesmo caminho da tela de custos
+// (POST /api/custos com so os SKUs editados: backup, historico e trava de valor absurdo); o imposto vai para /api/mt/imposto
+let nvGrupos = [], nvEdits = {}, nvCustos = {};
+const lerBR = (s) => { const t = String(s == null ? '' : s).trim().replace(/\s|R\$/g, ''); if (!t) return null; const n = Number(t.includes(',') ? t.replace(/\./g, '').replace(',', '.') : t); return Number.isFinite(n) ? n : NaN; };
+
+async function abrirNivelar() {
+    if (!dados) return;
+    const g = {};
+    for (const l of filtradas.filter(l => !l.cancelada && l.sku)) {
+        const k = l.sku.toLowerCase();
+        (g[k] ||= { sku: l.sku, titulo: l.titulo, linhas: [], custoUn: l.custo != null ? r2(l.custo / l.qtd) : null }).linhas.push(l);
+    }
+    nvGrupos = Object.values(g).sort((a, b) => (b.custoUn == null) - (a.custoUn == null) || b.linhas.length - a.linhas.length);   // sem custo primeiro
+    nvEdits = {}; nvAvisou = false;
+    $('nvImp').value = num(impostoPct);
+    $('nvSoSem').checked = nvGrupos.some(x => x.custoUn == null);
+    $('nvBusca').value = ''; $('nvMsg').className = 'aviso'; $('nvMsg').textContent = ''; $('nvForcar').hidden = true;
+    try { nvCustos = await fetch('/api/custos').then(r => r.json()); } catch { nvCustos = {}; }
+    desenharNivelar();
+    $('mNivelar').hidden = false;
+}
+// com custo editado e nao salvo: o primeiro Fechar avisa, o segundo descarta
+let nvAvisou = false;
+function fecharNivelar() {
+    if (Object.keys(nvEdits).length && !nvAvisou) {
+        nvAvisou = true; $('nvMsg').className = 'aviso erro';
+        $('nvMsg').textContent = 'Há custos editados e não salvos. Clique em Fechar de novo para descartar, ou em Salvar.';
+        return;
+    }
+    nvEdits = {}; $('mNivelar').hidden = true;
+}
+
+// pares "A-B-par": se os dois lados tem custo na planilha, sugere a soma (o par nao herda o custo de um lado so)
+function sugestaoPar(sku) {
+    const m = /^(.+?)-(.+?)-par$/i.exec(sku); if (!m) return null;
+    const c = (k) => { const v = Number(nvCustos[String(k).toLowerCase()]); return v > 0 ? v : null; };
+    const a = c(m[1]), b = c(m[2]);
+    return a && b ? r2(a + b) : null;
+}
+
+function mcCom(grupo, custoUn, imp) {
+    let mc = 0, base = 0;
+    for (const l of grupo.linhas) {
+        if (l.frete_vendedor == null || custoUn == null) return null;
+        mc += l.base - custoUn * l.qtd - l.base * (l.imposto_sku ?? imp) / 100 - l.tarifa - l.frete_vendedor; base += l.bruto;
+    }
+    return base ? r2(mc / base * 100) : null;
+}
+
+function desenharNivelar() {
+    const so = $('nvSoSem').checked, q = $('nvBusca').value.trim().toLowerCase();
+    const impNovo = lerBR($('nvImp').value), imp = Number.isFinite(impNovo) && impNovo != null ? impNovo : impostoPct;
+    $('nvImp').classList.toggle('ruim', !(Number.isFinite(impNovo) && impNovo >= 0 && impNovo <= 30));
+    $('nvImp').classList.toggle('mudou', Number.isFinite(impNovo) && impNovo !== impostoPct);
+    const L = nvGrupos.filter(x => (!so || x.custoUn == null || nvEdits[x.sku.toLowerCase()] != null) && (!q || x.sku.toLowerCase().includes(q) || x.titulo.toLowerCase().includes(q)));
+    $('nvConta').textContent = `${nvGrupos.filter(x => x.custoUn == null).length} sem custo · ${nvGrupos.length} SKUs na busca`;
+    $('nvTab').innerHTML = `<thead><tr><th class="t">SKU</th><th class="t">Anúncio</th><th>Vendas</th><th>Un.</th><th>Preço médio</th><th>Custo atual (un.)</th><th>Novo custo (un.)</th><th>MC% hoje</th><th>MC% com o novo</th></tr></thead><tbody>${
+        L.map(x => {
+            const k = x.sku.toLowerCase(), ed = nvEdits[k], novo = ed != null ? lerBR(ed) : null;
+            const un = x.linhas.reduce((s, l) => s + l.qtd, 0), preco = r2(x.linhas.reduce((s, l) => s + l.base, 0) / un);
+            const ruim = ed != null && ed.trim() !== '' && !(novo > 0);
+            const usado = ed != null && novo > 0 ? novo : x.custoUn;
+            const hoje = mcCom(x, x.custoUn, impostoPct), depois = mcCom(x, usado, imp);
+            const sug = x.custoUn == null ? sugestaoPar(x.sku) : null;
+            const cor = (v) => v == null ? '' : v < 0 ? 'neg' : 'pos';
+            return `<tr><td class="t">${esc(x.sku)}</td><td class="t prod">${esc(x.titulo)}</td><td>${x.linhas.length}</td><td>${un}</td><td>${num(preco)}</td>
+                <td>${x.custoUn == null ? '<span class="falta">sem custo</span>' : num(x.custoUn)}</td>
+                <td><input class="nv-in ${ed != null && !ruim ? 'mudou' : ''} ${ruim ? 'ruim' : ''}" data-k="${esc(k)}" value="${esc(ed != null ? ed : '')}" placeholder="${x.custoUn == null ? 'R$' : num(x.custoUn)}" oninput="editar(this)">
+                    ${sug ? `<span class="sug" data-k="${esc(k)}" data-v="${sug}" onclick="usarSugestao(this)">usar soma dos lados (${num(sug)})</span>` : ''}</td>
+                <td class="${cor(hoje)}">${pct(hoje)}</td><td class="${cor(depois)}">${pct(depois)}</td></tr>`;
+        }).join('') || '<tr><td class="t" colspan="9" style="padding:24px;color:var(--l3)">Nenhum SKU com esses filtros.</td></tr>'}</tbody>`;
+}
+function editar(el) {
+    const k = el.dataset.k;
+    if (el.value.trim() === '') delete nvEdits[k]; else nvEdits[k] = el.value;
+    nvAvisou = false;
+    const pos = el.selectionStart;
+    desenharNivelar();
+    const novo = document.querySelector(`#nvTab input[data-k="${CSS.escape(k)}"]`);
+    if (novo) { novo.focus(); try { novo.setSelectionRange(pos, pos); } catch {} }
+}
+function usarSugestao(el) { nvEdits[el.dataset.k] = num(Number(el.dataset.v)); nvAvisou = false; desenharNivelar(); }
+
+async function salvarNivelar(forcar) {
+    const msg = (t, c) => { $('nvMsg').className = 'aviso ' + (c || ''); $('nvMsg').textContent = t; };
+    const alt = {};
+    for (const [k, v] of Object.entries(nvEdits)) {
+        const n = lerBR(v);
+        if (!(n > 0)) return msg(`Custo inválido em ${k}: use um valor maior que zero, como 38,90.`, 'erro');
+        alt[k] = r2(n);
+    }
+    const imp = lerBR($('nvImp').value);
+    if (!(Number.isFinite(imp) && imp >= 0 && imp <= 30)) return msg('Imposto inválido: use um percentual entre 0 e 30.', 'erro');
+    const mudouImp = r2(imp) !== r2(impostoPct);
+    if (!Object.keys(alt).length && !mudouImp) return msg('Nada mudou.');
+    $('nvSalvar').disabled = true; msg('Salvando…');
+    try {
+        if (Object.keys(alt).length) {
+            const r = await fetch('/api/custos', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ alteracoes: alt, forcar: !!forcar }) }).then(x => x.json());
+            if (!r.ok && r.suspeitos) {
+                $('nvForcar').hidden = false;
+                return msg(`${r.erro} ${r.suspeitos.map(s => `${s.sku}: ${s.antes == null ? 'sem custo' : num(s.antes)} → ${num(s.depois)}`).join(' · ')}`, 'erro');
+            }
+            if (!r.ok) return msg(r.erro || 'Não consegui gravar os custos.', 'erro');
+        }
+        if (mudouImp) {
+            const r = await fetch('/api/mt/imposto', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pct: imp }) }).then(x => x.json());
+            if (!r.ok) return msg(r.erro || 'Não consegui gravar o imposto.', 'erro');
+            impostoPct = r.imposto_pct;
+        }
+        const n = Object.keys(alt).length;
+        nvEdits = {}; $('nvForcar').hidden = true; $('mNivelar').hidden = true;
+        $('estado').className = 'estado'; $('estado').textContent = `Nivelado: ${n} custo(s)${mudouImp ? ` e imposto em ${num(impostoPct)}%` : ''}. Recalculando…`;
+        await buscar(true);
+        $('estado').textContent = `Nivelado: ${n} custo(s)${mudouImp ? ` e imposto em ${num(impostoPct)}%` : ''}. Valores recalculados.`;
+    } catch { msg('Sem resposta do app.', 'erro'); }
+    finally { $('nvSalvar').disabled = false; }
+}
+
+function exportar() {
+    if (!filtradas.length) return;
+    const n = (v) => v == null ? '' : String(v).replace('.', ',');
+    const cab = ['Pedido', 'Carrinho', 'Anúncio', 'MLB', 'Conta', 'SKU', 'Data', 'Status', 'Frete', 'Valor Unit.', 'Qtd.', 'Faturamento ML', 'Custo', 'Imposto', 'Tarifa de Venda', 'Frete Comprador', 'Frete Vendedor', 'Margem Contrib.', 'MC em %'];
+    const q = (s) => `"${String(s == null ? '' : s).replace(/"/g, '""')}"`;
+    const corpo = filtradas.map(l => [q(l.pedido), q(l.carrinho), q(l.titulo), q(l.item_id), q(l.conta), q(l.sku), q(dataBR(l.data)), q(l.cancelada ? 'Cancelada' : 'Aprovada'), q(l.modalidade),
+        n(l.valor), l.qtd, n(l.faturamento), n(l.custo), n(l.imposto), n(l.tarifa), n(l.frete_comprador), n(l.frete_vendedor), n(l.mc), n(l.mc_pct)].join(';'));
+    const blob = new Blob(['﻿' + [cab.map(q).join(';'), ...corpo].join('\r\n')], { type: 'text/csv;charset=utf-8' });
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `resumo_financeiro_${$('de').value}_${$('ate').value}.csv`; a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+}
+
+let periodo = null; try { periodo = JSON.parse(localStorage.getItem('mt_periodo') || 'null'); } catch {}
+$('de').value = (periodo && periodo.de) || hoje(); $('ate').value = (periodo && periodo.ate) || hoje();
+desenharResumo(); desenharTabela();
+buscar();
+document.body.classList.add('page-ready');
+</script>
+<script src="/assets/js/sidebar.js"></script>
+</body>
+</html>
