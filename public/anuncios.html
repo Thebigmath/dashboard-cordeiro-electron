@@ -225,6 +225,7 @@
     <div class="barra">
         <label class="chip" style="cursor:pointer"><input type="checkbox" id="selPagina" onchange="marcarPagina(this.checked)"> Página</label>
         <span style="position:relative"><button class="bt" id="btMult" onclick="abrirMult(event)" disabled><i class="bi bi-chevron-down"></i> Ações Múltiplas <span id="nSel"></span></button></span>
+        <button class="bt" onclick="abrirImpConta()" title="Imposto da conta: vale para todos os SKUs e para todo o SEVEN da Cordeiro"><i class="bi bi-percent"></i> Imposto da conta: <b id="impContaV">…</b></button>
         <span class="sub" id="contagem"></span><div class="pag" id="pagTopo"></div>
     </div>
     <div id="lista"></div>
@@ -375,6 +376,20 @@
             <button class="bt" id="pcSalvarSku" hidden onclick="salvarSkuPrec()"><i class="bi bi-cash-coin"></i> Salvar custo e imposto no SKU</button>
             <button class="bt" onclick="$('mPrec').hidden=true">Fechar</button>
         </div>
+    </div>
+</div>
+<div class="modal-an" id="mImp" hidden onclick="if(event.target===this)this.hidden=true">
+    <div class="box">
+        <div style="display:flex;align-items:center"><h3><i class="bi bi-percent"></i> Imposto da conta</h3><button class="ic" style="margin-left:auto;font-size:18px" onclick="$('mImp').hidden=true">&times;</button></div>
+        <div class="nota" id="ipEstado" style="margin:6px 0 12px"></div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <input class="in" id="ipPct" style="width:110px;text-align:right" onkeydown="if(event.key==='Enter')salvarImpConta()"><span>%</span>
+            <button class="bt sm" onclick="$('ipPct').value='4,00'">4%</button><button class="bt sm" onclick="$('ipPct').value='7,00'">7%</button>
+        </div>
+        <label class="chip" id="ipLimparL" style="cursor:pointer;margin-top:12px" hidden><input type="checkbox" id="ipLimpar" checked> <span id="ipLimparT"></span></label>
+        <div class="nota">Vale para <b>todos os SKUs</b> que não têm imposto próprio e para todo o SEVEN da Cordeiro: aba Anúncios e Precificador, Análise com IA (motor de preço), Precificar, Promoções, Premium × Clássico, Análise de vendas, Defesa e o DRE dos meses sem Planilha avançada. Fica no log com o valor de antes.</div>
+        <div class="msg" id="ipMsg"></div>
+        <div class="rod"><button class="bt pri" onclick="salvarImpConta()">Salvar e aplicar em todos</button><button class="bt" onclick="$('mImp').hidden=true">Fechar</button></div>
     </div>
 </div>
 <div class="modal-an largo" id="mDesc" hidden onclick="if(event.target===this)this.hidden=true">
@@ -1217,6 +1232,34 @@ async function salvarSkuPrec(forcar) {
         carregarDetalhes(filtrados.slice((pagina - 1) * POR_PAGINA, pagina * POR_PAGINA).map(x => x.id));
     } catch (e) { $('pcMsg').innerHTML = `<span class="res-erro">${esc(e.message)}</span>`; }
 }
+
+// ---- Imposto da conta: um % para todos os SKUs e todo o SEVEN (impostos_sku.salvarConta)
+async function lerImpConta() {
+    try { const r = await fetch('/api/ad/imposto-conta').then(x => x.json()); $('impContaV').textContent = num(r.conta) + '%'; return r; } catch { return null; }
+}
+async function abrirImpConta() {
+    $('ipMsg').innerHTML = ''; $('mImp').hidden = false; $('ipEstado').textContent = 'Lendo…';
+    const r = await lerImpConta(); if (!r) { $('ipEstado').innerHTML = '<span class="res-erro">Sem resposta do app.</span>'; return; }
+    $('ipPct').value = num(r.conta);
+    $('ipEstado').innerHTML = r.unificado ? `Hoje: <b>${num(r.conta)}%</b> em todo o SEVEN.`
+        : `Hoje: <b>${num(r.conta)}%</b> na aba Anúncios e na Análise com IA, mas <b>${num(r.resto)}%</b> no resto do SEVEN. Salvar deixa um % só para tudo.`;
+    $('ipLimparL').hidden = !r.skus_proprios;
+    $('ipLimparT').textContent = `Também os ${r.skus_proprios} SKU(s) com imposto próprio passam a usar o da conta (${r.lista.slice(0, 6).map(x => `${x.sku} ${num(x.pct)}%`).join(', ')}${r.skus_proprios > 6 ? '…' : ''})`;
+}
+async function salvarImpConta() {
+    const pct = lerBR($('ipPct').value);
+    if (!(pct >= 0 && pct <= 30)) { $('ipMsg').innerHTML = '<span class="res-erro">Use um percentual entre 0 e 30.</span>'; return; }
+    $('ipMsg').innerHTML = '<span class="cinza">Salvando…</span>';
+    try {
+        const r = await postJ('/api/ad/imposto-conta', { pct, limpar_skus: !$('ipLimparL').hidden && $('ipLimpar').checked });
+        if (!r.ok) throw new Error(r.erro || 'Não consegui salvar.');
+        $('impContaV').textContent = num(r.conta) + '%'; det = {};
+        carregarDetalhes(filtrados.slice((pagina - 1) * POR_PAGINA, pagina * POR_PAGINA).map(x => x.id));
+        $('ipMsg').innerHTML = `<span class="res-ok"><i class="bi bi-check2-circle"></i> Imposto da conta: ${num(r.antes.conta)}% → <b>${num(r.conta)}%</b> em todo o SEVEN${r.skus_limpos ? ` · ${r.skus_limpos} SKU(s) com imposto próprio passaram a usar o da conta` : ''}${r.skus_proprios ? ` · ${r.skus_proprios} SKU(s) continuam com imposto próprio` : ''}. As margens da página foram recalculadas.</span>`;
+        $('ipEstado').innerHTML = `Hoje: <b>${num(r.conta)}%</b> em todo o SEVEN.`; $('ipLimparL').hidden = !r.skus_proprios;
+    } catch (e) { $('ipMsg').innerHTML = `<span class="res-erro">${esc(e.message)}</span>`; }
+}
+lerImpConta();
 
 // ---- Movimentacao do estoque Full (chip Estoque Full)
 let mvItem = null, mvDados = null, mvPag = 1;

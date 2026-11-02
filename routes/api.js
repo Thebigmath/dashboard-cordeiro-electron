@@ -1248,6 +1248,8 @@ router.post('/ad/fotos/desfazer', auth, (req, res) => { require('../lib/fotos_an
 router.get('/ad/sku', auth, (req, res) => { try { res.json(require('../lib/anuncios_ad').sku(String(req.query.sku || ''))); } catch (e) { res.status(400).json({ erro: String(e.message || e) }); } });
 router.post('/ad/precificar', auth, (req, res) => { require('../lib/anuncios_ad').precificar(req.body || {}).then(d => res.json(d)).catch(e => res.status(400).json({ erro: String(e.message || e) })); });
 router.post('/ad/precificar/aplicar', auth, (req, res) => { require('../lib/anuncios_ad').aplicarPreco(req.body || {}).then(d => res.json(d)).catch(e => res.status(400).json({ ok: false, erro: String(e.message || e) })); });
+router.get('/ad/imposto-conta', auth, (req, res) => res.json(require('../lib/impostos_sku').contaInfo()));
+router.post('/ad/imposto-conta', auth, (req, res) => { try { res.json(require('../lib/impostos_sku').salvarConta((req.body || {}).pct, { limparSkus: !!(req.body || {}).limpar_skus })); } catch (e) { res.status(400).json({ ok: false, erro: String(e.message || e) }); } });
 router.post('/ad/sku', auth, (req, res) => { try { res.json(require('../lib/anuncios_ad').salvarSku(req.body || {})); } catch (e) { res.status(400).json({ ok: false, erro: String(e.message || e) }); } });
 // Mudanca em PONTOS de margem: preco para +/-N pontos (botoes do Precificar) e quantos pontos uma mudanca representou
 router.get('/seven/preco/:item/pontos', auth, (req, res) => { require('../lib/pontos').maisPontos(req.params.item, Number(req.query.pontos || 1), req.query.base).then(d => res.json(d)).catch(erroJson(res)); });

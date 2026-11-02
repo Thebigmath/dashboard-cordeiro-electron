@@ -1,5 +1,11 @@
 [
   {
+    "versao": "1.6.148",
+    "data": "2026-11-02",
+    "titulo": "Imposto da conta em um lugar só; Análise com IA com o imposto certo",
+    "texto": "- AD HEALTH > Anúncios: botão \"Imposto da conta\" (ao lado de Ações Múltiplas). Você escolhe o % (atalhos 4% e 7%) e ele passa a valer para todos os SKUs sem imposto próprio e para todo o SEVEN da Cordeiro: Anúncios e Precificador, Análise com IA, Precificar, Promoções, Premium x Clássico, Análise de vendas, Defesa e o DRE dos meses sem Planilha avançada. Opcional: os SKUs com imposto próprio também passam a usar o da conta. Toda troca fica no log.\n- Até salvar uma vez, a aba Anúncios usa 4% e o resto do SEVEN 7% (padrões antigos): abra o botão e salve o % certo para unificar.\n- Análise com IA (motor de preço): a margem agora usa o imposto do SKU ou o da conta, o mesmo da aba Anúncios e do Mercado Turbo (antes era 7% fixo). Trocar o imposto da conta refaz a avaliação."
+  },
+  {
     "versao": "1.6.147",
     "data": "2026-11-02",
     "titulo": "Anúncios: Precificador do anúncio; Resumo Financeiro (MT - Teste) sai do menu",
