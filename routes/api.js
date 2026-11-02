@@ -1172,8 +1172,10 @@ const ABERTURA_DIA = 'adhealth_abertura.json';
 const hojeBR = () => new Date(Date.now() - 3 * 3600 * 1000).toISOString().slice(0, 10);
 router.get('/seven/abertura', auth, (req, res) => {
     const a = lerJson(ABERTURA_DIA, {});
-    res.json({ hoje: hojeBR(), atualizado_dia: a.dia || null, precisa: a.dia !== hojeBR() });
+    const cm = require('../lib/coleta_manha').estado;   // a coleta da manha (automatica) ja esta rodando: a tela nao dispara outra
+    res.json({ hoje: hojeBR(), atualizado_dia: a.dia || null, precisa: a.dia !== hojeBR() && !cm.rodando, coleta_automatica: cm.rodando ? cm.fase || 'rodando' : null });
 });
+router.get('/seven/coleta-manha', auth, (req, res) => res.json(require('../lib/coleta_manha').situacao()));
 router.post('/seven/abertura/feito', auth, (req, res) => {
     salvarJson(ABERTURA_DIA, { dia: hojeBR(), em: new Date().toISOString() });
     res.json({ ok: true });

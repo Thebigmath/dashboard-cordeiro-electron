@@ -1,5 +1,11 @@
 [
   {
+    "versao": "1.6.149",
+    "data": "2026-11-02",
+    "titulo": "Coleta da manhã automática: a Análise com IA roda todo dia sozinha",
+    "texto": "- A partir das 7h, com o app aberto, o SEVEN faz sozinho a coleta do dia (estoque, vendas e pedidos de ontem), a mesma que antes só acontecia ao abrir o AD HEALTH. Logo depois a Análise com IA (regras de preço) roda a análise do dia e avisa no Windows.\n- Se a coleta falhar, tenta de novo a cada 15 minutos (até 3 vezes no dia). Se você abrir o AD HEALTH enquanto ela roda, a tela mostra \"coleta da manhã em andamento\" e não dispara outra.\n- O modo continua o mesmo: no semi, só sugere e avisa; nada muda de preço sem você aplicar."
+  },
+  {
     "versao": "1.6.148",
     "data": "2026-11-02",
     "titulo": "Imposto da conta em um lugar só; Análise com IA com o imposto certo",

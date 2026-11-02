@@ -1891,6 +1891,7 @@ async function recarregarTudo() {
 // novo na proxima abertura. Astra (concorrentes) e Ranking ML continuam so pelos botoes.
 async function atualizarNaPrimeiraAberturaDoDia() {
     let a; try { a = await api('/api/seven/abertura'); } catch { return; }
+    if (a.coleta_automatica) { $('svEstado').textContent = `coleta da manhã em andamento (${a.coleta_automatica})…`; return; }
     if (!a.precisa) return;
     $('svEstado').textContent = 'primeira abertura do dia: atualizando…';
     if (await recarregarTudo()) await fetch('/api/seven/abertura/feito', { method: 'POST' }).catch(() => {});

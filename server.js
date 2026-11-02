@@ -114,6 +114,7 @@ module.exports = {
         // ranking ML: so leitura - a coleta e feita pelo app da Flavia (lib/ranking_mt.js)
         require('./lib/ranking_mt').iniciarAgendador();
         require('./lib/motor_preco').iniciarAgendador();
+        require('./lib/coleta_manha').iniciarAgendador(port);   // coleta do dia a partir das 7h, sem abrir o AD HEALTH (destrava a rodada do motor de preco)
         require('./lib/flex_auto').iniciarAgendador();
         require('./lib/reputacao_previsao').iniciarAgendador();   // reputacao: coleta e previsao do Platinum a cada 6 h (a partir das 7h)
         require('./lib/belvo').iniciarAgendador();   // Belvo (Open Finance): saldo e cartao do Mercado Pago PJ, so se ja conectou (a cada 30 min)
