@@ -1,5 +1,11 @@
 [
   {
+    "versao": "1.6.150",
+    "data": "2026-11-03",
+    "titulo": "Agenda do Full: vigias mais confiáveis",
+    "texto": "- Fim dos avisos falsos de madrugada: quando o Mercado Livre devolve a lista de envios pela metade (status e data vazios), o SEVEN ignora essa leitura em vez de avisar \"data mudou\" em dezenas de envios.\n- Aviso de \"data mudou\" só para envio em andamento; os finalizados e cancelados ficam só no histórico.\n- Agenda que vem vazia do ML não conta mais como \"vagas fecharam\" (evita aviso falso de vaga nova na consulta seguinte).\n- Marcação mais rápida: sem uma consulta extra ao ML na hora da corrida pela vaga.\n- Com vigia ativa, o Windows não suspende o PC (a tela pode apagar); sem vigia, volta ao normal."
+  },
+  {
     "versao": "1.6.149",
     "data": "2026-11-02",
     "titulo": "Coleta da manhã automática: a Análise com IA roda todo dia sozinha",
