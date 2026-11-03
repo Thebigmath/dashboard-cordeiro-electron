@@ -1368,6 +1368,23 @@ router.post('/seven/simulacao-precos/:item/:decisao', auth, (req, res) => {
 });
 router.post('/seven/preco/:item/ia', auth, (req, res) => { require('../lib/preco_ia').sugerir(req.params.item, req.body || {}).then(d => res.json(d)).catch(erroJson(res)); });
 // Clonagem (AD HEALTH): fila de anuncios para clonar na outra conta
+// Gerar Premium (03/11/2026): o anuncio Premium irmao do Classico, com validacao do ML e aprovacao por anuncio
+const PG = () => require('../lib/premium_gerar');
+router.get('/ad/premium-gerar/candidatos', auth, (req, res) => { PG().candidatos({ forcar: req.query.forcar === '1' }).then(d => res.json(d)).catch(erroJson(res)); });
+router.get('/ad/premium-gerar', auth, (req, res) => { try { res.json(PG().lista()); } catch (e) { erroJson(res)(e); } });
+router.post('/ad/premium-gerar', auth, (req, res) => { PG().adicionar(req.body || {}).then(d => res.json(d)).catch(erroJson(res)); });
+router.post('/ad/premium-gerar/planilha', auth, upload.single('planilha'), (req, res) => {
+    if (!req.file) return res.status(400).json({ erro: 'Nenhum arquivo enviado' });
+    PG().importar(req.file.path).then(d => res.json(d)).catch(e => res.status(400).json({ erro: e.message })).finally(() => { try { fs.unlinkSync(req.file.path); } catch {} });
+});
+router.post('/ad/premium-gerar/:id/:acao', auth, (req, res) => {
+    const id = req.params.id; if (!/^MLB\d+$/.test(id)) return res.status(400).json({ erro: 'MLB inválido.' });
+    const a = req.params.acao;
+    const f = a === 'validar' ? () => PG().validar(id) : a === 'aprovar' ? () => PG().aprovar(id) : a === 'recalcular' ? () => PG().recalcular(id)
+        : a === 'editar' ? async () => PG().editar(id, req.body || {}) : a === 'remover' ? async () => PG().remover(id) : null;
+    if (!f) return res.status(400).json({ erro: 'Ação inválida.' });
+    f().then(d => res.json(d)).catch(e => res.status(400).json({ erro: e.message }));
+});
 const clonagem = () => require('../lib/clonagem');
 router.get('/seven/clonagem', auth, (req, res) => { try { res.json(clonagem().lista()); } catch (e) { erroJson(res)(e); } });
 router.post('/seven/clonagem', auth, (req, res) => { clonagem().adicionar(req.body.texto).then(d => res.json(d)).catch(erroJson(res)); });

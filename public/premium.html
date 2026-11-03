@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerar Premium — Dashboard Cordeiro</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
+    <link href="assets/css/style.css" rel="stylesheet">
+    <style>
+        /* Gerar Premium: acrescenta a opcao de venda Premium ao produto do Classico (sem recriar), com conferencia e aprovacao */
+        body { opacity:0; transition:opacity .38s cubic-bezier(.22,1,.36,1); }
+        body.page-ready { opacity:1; }
+        .pg { --verde:#2E9E5B; --amarelo:#E8A200; --verm:#D92D20; --azul:#0a84ff; padding:22px 28px 40px; width:100%; box-sizing:border-box; overflow-y:auto; height:100vh; }
+        [data-theme="dark"] .pg { --verde:#34C77B; --amarelo:#FFC24A; --verm:#FF6B60; }
+        .topo { display:flex; align-items:center; gap:14px; flex-wrap:wrap; margin-bottom:6px; }
+        .topo h1 { font-size:28px; font-weight:700; color:var(--l1); margin:0; display:flex; align-items:center; gap:8px; }
+        .topo h1 .seta { color:var(--verde); font-size:22px; }
+        .sub { color:var(--l2); font-size:14px; margin:0 0 16px; max-width:980px; line-height:1.5; }
+        .bt { display:inline-flex; align-items:center; gap:7px; padding:8px 16px; border-radius:999px; border:0; background:var(--verde); color:#fff; font-size:13.5px; font-weight:600; cursor:pointer; white-space:nowrap; }
+        .bt:disabled { opacity:.55; cursor:not-allowed; }
+        .bt.sec { background:transparent; color:var(--l1); border:1px solid var(--sep); }
+        .bt.mini { padding:4px 11px; font-size:12.5px; }
+        .bt.azul { background:var(--azul); }
+        .painel { border:1px solid var(--sep); border-radius:14px; background:var(--s1); padding:16px 18px; margin-bottom:14px; }
+        .painel h3 { font-size:13px; text-transform:uppercase; letter-spacing:.05em; color:var(--l3); margin:0 0 12px; font-weight:600; display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+        .painel h3 .dir { margin-left:auto; display:flex; gap:8px; text-transform:none; letter-spacing:0; }
+        .passos { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; margin-bottom:14px; }
+        .passos div { background:var(--s1); border:1px solid var(--sep); border-radius:12px; padding:10px 12px; font-size:13px; color:var(--l2); line-height:1.4; }
+        .passos b { color:var(--l1); }
+        .passos > div > b:first-child { display:block; font-size:14px; margin-bottom:2px; }
+        .passos i { color:var(--verde); margin-right:4px; }
+        .barra { display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:10px; }
+        .barra input[type=search] { flex:1; min-width:200px; border:1px solid var(--sep); border-radius:999px; background:var(--s2); color:var(--l1); padding:7px 14px; font-size:13.5px; }
+        .barra label { font-size:13px; color:var(--l2); display:flex; gap:6px; align-items:center; }
+        table.t { width:100%; border-collapse:collapse; font-size:13.5px; }
+        .t th { font-weight:500; color:var(--l3); text-align:left; padding:6px 8px; font-size:12px; border-bottom:1px solid var(--sep); white-space:nowrap; }
+        .t td { padding:7px 8px; border-bottom:1px solid var(--sep); color:var(--l1); font-variant-numeric:tabular-nums; vertical-align:middle; }
+        .t td.n, .t th.n { text-align:right; }
+        .t img { width:38px; height:38px; object-fit:cover; border-radius:6px; background:var(--s2); }
+        .t .tit { max-width:360px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; display:block; }
+        .t .f { color:var(--l3); font-size:12px; }
+        .rolar { max-height:440px; overflow:auto; }
+        .pill { display:inline-block; font-size:11.5px; font-weight:600; border-radius:999px; padding:2px 9px; white-space:nowrap; }
+        .pill.ok { background:color-mix(in srgb, var(--verde) 16%, transparent); color:var(--verde); }
+        .pill.nao { background:color-mix(in srgb, var(--amarelo) 18%, transparent); color:var(--amarelo); }
+        .pill.err { background:color-mix(in srgb, var(--verm) 15%, transparent); color:var(--verm); }
+        .pill.off { background:var(--s2); color:var(--l3); }
+        .preco { width:92px; border:1px solid var(--sep); border-radius:8px; background:var(--s2); color:var(--l1); padding:4px 7px; font-size:13.5px; text-align:right; }
+        .msg { font-size:12.5px; color:var(--l3); margin-top:3px; max-width:420px; }
+        .msg.err { color:var(--verm); } .msg.av { color:var(--amarelo); }
+        .vazio { color:var(--l3); font-size:13.5px; padding:14px 4px; }
+        .aviso { background:color-mix(in srgb, var(--amarelo) 13%, transparent); border:1px solid color-mix(in srgb, var(--amarelo) 45%, transparent); border-radius:10px; padding:9px 12px; font-size:13px; color:var(--l1); margin:0 0 14px; line-height:1.5; }
+        .up { color:var(--l3); font-size:11.5px; }
+        @media (max-width: 1000px) { .passos { grid-template-columns:1fr 1fr; } .pg { padding:16px; } }
+    </style>
+<script src="/assets/js/shell.js"></script>
+</head>
+<body>
+<canvas id="canvas-bg"></canvas>
+<div class="aurora"><div class="aur-1"></div><div class="aur-2"></div><div class="aur-3"></div></div>
+<div class="d-flex"><main class="content"><div class="pg">
+    <div class="topo"><h1><span class="seta">›</span>Gerar Premium</h1></div>
+    <p class="sub">Clássico e Premium são só duas condições de venda do <b>mesmo produto</b>. Aqui o SEVEN <b>acrescenta a opção de venda Premium</b> a cada produto que só tem Clássico, sem recriar o anúncio: estoque, Full, ficha técnica, fotos e título continuam os do produto. Nada vai para o ML sem a sua aprovação.</p>
+    <div class="passos">
+        <div><b><i class="bi bi-1-circle"></i>Escolha</b>Marque os produtos abaixo ou envie uma planilha com a coluna <b>SKU</b> (e <b>PRECO</b>, se quiser fixar o preço).</div>
+        <div><b><i class="bi bi-2-circle"></i>Preço</b>Sugerido para a margem do Premium ficar 1 ponto acima da do Clássico. Pode editar.</div>
+        <div><b><i class="bi bi-3-circle"></i>Conferência</b>O SEVEN confere no ML se o produto existe, se ainda não tem Premium e se o preço e a margem fazem sentido, <b>sem gravar nada</b>.</div>
+        <div><b><i class="bi bi-4-circle"></i>Aprovação</b>Só o que passou na conferência pode ser aprovado; aí a opção Premium entra no produto.</div>
+    </div>
+    <div id="avisoUp"></div>
+
+    <div class="painel">
+        <h3><i class="bi bi-list-check"></i> Fila de aprovação <span id="filaCont"></span>
+            <span class="dir"><button class="bt sec mini" onclick="validarTodos()" id="btValTodos"><i class="bi bi-shield-check"></i> Conferir pendentes</button>
+            <button class="bt mini" onclick="aprovarValidados()" id="btAprTodos"><i class="bi bi-check2-all"></i> Aprovar conferidos</button></span></h3>
+        <div id="fila" class="rolar"><div class="vazio">Carregando…</div></div>
+    </div>
+
+    <div class="painel">
+        <h3><i class="bi bi-tag"></i> Produtos só com Clássico <span id="candCont"></span>
+            <span class="dir"><label class="bt sec mini" style="margin:0"><i class="bi bi-file-earmark-spreadsheet"></i> Enviar planilha de SKUs<input type="file" id="arq" accept=".xlsx,.xls,.csv" hidden onchange="enviarPlanilha(this)"></label>
+            <button class="bt sec mini" onclick="carregarCand(true)"><i class="bi bi-arrow-repeat"></i> Atualizar lista</button></span></h3>
+        <div class="barra">
+            <input type="search" id="busca" placeholder="Buscar por SKU ou título" oninput="desenharCand()">
+            <label><input type="checkbox" id="soAtivos" checked onchange="desenharCand()"> só ativos</label>
+            <button class="bt azul mini" onclick="adicionarMarcados()" id="btAdd"><i class="bi bi-plus-lg"></i> Pôr na fila (<span id="nMarc">0</span>)</button>
+            <span id="addMsg" class="msg"></span>
+        </div>
+        <div id="cand" class="rolar"><div class="vazio">Carregando…</div></div>
+    </div>
+</div></main></div>
+<script>
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const brl = (v) => v == null ? '—' : 'R$ ' + Number(v).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const pct = (v) => v == null ? '—' : String(v).replace('.', ',') + '%';
+const j = (u) => fetch(u).then(async r => { const d = await r.json(); if (!r.ok || d.erro) throw new Error(d.erro || r.status); return d; });
+const post = (u, b) => fetch(u, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(b || {}) }).then(async r => { const d = await r.json(); if (!r.ok || d.erro) throw new Error(d.erro || r.status); return d; });
+let CAND = [], FILA = [], marcados = new Set(), ocupado = false;
+
+async function carregarCand(forcar) {
+    $('cand').innerHTML = '<div class="vazio">Lendo os anúncios…</div>';
+    try { const d = await j('/api/ad/premium-gerar/candidatos' + (forcar ? '?forcar=1' : '')); CAND = d.candidatos; $('candCont').textContent = `· ${d.total} produtos (${d.ativos} ativos)`; }
+    catch (e) { $('cand').innerHTML = `<div class="vazio">${esc(e.message)}</div>`; return; }
+    desenharCand();
+}
+function desenharCand() {
+    const q = $('busca').value.trim().toLowerCase(), so = $('soAtivos').checked;
+    const L = CAND.filter(c => (!so || c.status === 'active') && (!q || (c.sku || '').toLowerCase().includes(q) || (c.titulo || '').toLowerCase().includes(q)));
+    $('nMarc').textContent = marcados.size;
+    $('cand').innerHTML = L.length ? `<table class="t"><thead><tr><th><input type="checkbox" onchange="marcarTodos(this.checked)" title="marcar os visíveis"></th><th></th><th>Anúncio Clássico</th><th>SKU</th><th>Logística</th><th class="n">Preço</th><th class="n">Custo</th><th class="n">Vendidos</th><th></th></tr></thead><tbody>
+        ${L.slice(0, 400).map(c => `<tr><td>${c.na_fila ? '' : c.variacoes ? '' : `<input type="checkbox" ${marcados.has(c.id) ? 'checked' : ''} onchange="marcar('${c.id}', this.checked)">`}</td>
+            <td><img src="${esc(c.foto || '')}" alt="" loading="lazy"></td>
+            <td><span class="tit" title="${esc(c.titulo)}">${esc(c.titulo)}</span><span class="f">${c.id} · ${c.status === 'active' ? 'ativo' : 'pausado'}</span></td>
+            <td>${esc(c.sku || '—')}</td><td>${esc(c.logistica || '')}</td><td class="n">${brl(c.preco)}</td><td class="n">${c.custo == null ? '<span class="pill nao">sem custo</span>' : brl(c.custo)}</td><td class="n">${c.vendidos}</td>
+            <td>${c.na_fila ? '<span class="pill off">na fila</span>' : c.variacoes ? '<span class="pill off">com variações</span>' : ''}</td></tr>`).join('')}
+        </tbody></table>${L.length > 400 ? `<div class="vazio">Mostrando 400 de ${L.length}. Use a busca.</div>` : ''}` : '<div class="vazio">Nenhum produto só com Clássico aqui.</div>';
+}
+function marcar(id, v) { v ? marcados.add(id) : marcados.delete(id); $('nMarc').textContent = marcados.size; }
+function marcarTodos(v) {
+    const q = $('busca').value.trim().toLowerCase(), so = $('soAtivos').checked;
+    for (const c of CAND) if (!c.na_fila && !c.variacoes && (!so || c.status === 'active') && (!q || (c.sku || '').toLowerCase().includes(q) || (c.titulo || '').toLowerCase().includes(q))) v ? marcados.add(c.id) : marcados.delete(c.id);
+    desenharCand();
+}
+async function adicionarMarcados() {
+    if (!marcados.size || ocupado) return;
+    ocupado = true; $('btAdd').disabled = true; $('addMsg').className = 'msg'; $('addMsg').textContent = `Calculando o preço de ${marcados.size}…`;
+    try {
+        const d = await post('/api/ad/premium-gerar', { ids: [...marcados] });
+        $('addMsg').textContent = `${d.adicionados.length} na fila${d.recusados.length ? ` · ${d.recusados.length} recusado(s): ${d.recusados.slice(0, 3).map(x => x.id + ' (' + x.motivo + ')').join(', ')}` : ''}. Conferindo…`;
+        marcados.clear(); FILA = d.fila; desenharFila(); carregarCand(false);
+        await validarLista(d.adicionados);
+        $('addMsg').textContent = `${d.adicionados.length} na fila e conferidos. Revise e aprove lá em cima.`;
+    } catch (e) { $('addMsg').className = 'msg err'; $('addMsg').textContent = e.message; }
+    ocupado = false; $('btAdd').disabled = false;
+}
+async function enviarPlanilha(inp) {
+    const f = inp.files[0]; inp.value = ''; if (!f || ocupado) return;
+    ocupado = true; $('addMsg').className = 'msg'; $('addMsg').textContent = `Lendo ${f.name}…`;
+    try {
+        const fd = new FormData(); fd.append('planilha', f);
+        const d = await fetch('/api/ad/premium-gerar/planilha', { method: 'POST', body: fd }).then(async r => { const x = await r.json(); if (!r.ok || x.erro) throw new Error(x.erro || r.status); return x; });
+        $('addMsg').textContent = `${d.lidos} linha(s) · ${d.adicionados.length} na fila${d.sem_candidato_total ? ` · ${d.sem_candidato_total} SKU(s) sem Clássico sozinho (já têm Premium ou não existem): ${d.sem_candidato.slice(0, 6).join(', ')}${d.sem_candidato_total > 6 ? '…' : ''}` : ''}. Conferindo…`;
+        FILA = d.fila; desenharFila(); carregarCand(false);
+        await validarLista(d.adicionados);
+        $('addMsg').textContent += ' Pronto.';
+    } catch (e) { $('addMsg').className = 'msg err'; $('addMsg').textContent = e.message; }
+    ocupado = false;
+}
+
+// ---- fila ----
+const ST = { na_fila: ['nao', 'aguardando conferência'], validando: ['off', 'conferindo…'], validado: ['ok', 'conferido'], com_erro: ['err', 'com problema'], aprovando: ['off', 'criando…'], criado: ['ok', 'Premium adicionado'] };
+async function carregarFila() { try { FILA = (await j('/api/ad/premium-gerar')).fila; } catch { return; } desenharFila(); }
+function desenharFila() {
+    const ab = FILA.filter(x => x.status !== 'criado'), feitos = FILA.filter(x => x.status === 'criado');
+    $('filaCont').textContent = `· ${ab.length} na fila · ${ab.filter(x => x.status === 'validado').length} conferidos · ${feitos.length} adicionados`;
+    const sep = feitos.filter(x => x.criado && !x.criado.mesmo_produto);
+    $('avisoUp').innerHTML = sep.length ? `<div class="aviso"><b>Atenção:</b> ${sep.length} Premium voltou(aram) do ML ligado(s) a outro produto: ${sep.map(x => esc(x.criado.id)).join(', ')}. Confira no ML antes de seguir.</div>` : '';
+    const linha = (x) => {
+        const s = ST[x.status] || ['off', x.status], v = x.validacao || {};
+        const msg = x.status === 'criado' ? `<div class="msg">${x.criado.mesmo_produto ? '<i class="bi bi-link-45deg"></i> no mesmo produto do Clássico (estoque compartilhado)' : `<span class="err">${esc(x.criado.aviso)}</span>`} · ${esc((x.criado.passos || []).join(' · '))}</div>`
+            : v.erro ? `<div class="msg err">${esc(v.erro)}</div>` : (v.avisos || []).length ? `<div class="msg av">${esc(v.avisos.join(' · '))}</div>` : x.aviso ? `<div class="msg av">${esc(x.aviso)}</div>` : '';
+        const acoes = x.status === 'criado' ? `<a class="bt sec mini" href="${esc(x.criado.permalink || '#')}" target="_blank"><i class="bi bi-box-arrow-up-right"></i> ${esc(x.criado.id)}</a>`
+            : `<button class="bt sec mini" onclick="validar('${x.id}')"><i class="bi bi-shield-check"></i> Conferir</button>
+               <button class="bt mini" ${x.status === 'validado' ? '' : 'disabled title="confira primeiro"'} onclick="aprovar('${x.id}')"><i class="bi bi-check2"></i> Aprovar</button>
+               <button class="bt sec mini" onclick="remover('${x.id}')" title="tirar da fila"><i class="bi bi-x"></i></button>`;
+        return `<tr><td><img src="${esc(x.foto || '')}" alt="" loading="lazy"></td>
+            <td><span class="tit" title="${esc(x.titulo)}">${esc(x.titulo)}</span><span class="f">${esc(x.sku || '—')} · Clássico ${x.id} · ${esc(x.logistica || '')}</span>${x.up ? `<span class="up"> · produto ${esc(x.up)}</span>` : ''}${msg}</td>
+            <td class="n">${brl(x.preco_classico)}<div class="f">${pct(x.margem_classico)}</div></td>
+            <td class="n">${x.status === 'criado' ? brl(x.preco) : `<input class="preco" value="${x.preco ?? ''}" onchange="editar('${x.id}', this.value)">`}<div class="f">${pct(x.margem_premium)}${x.origem_preco ? ' · ' + esc(x.origem_preco) : ''}</div></td>
+            <td><span class="pill ${s[0]}">${s[1]}</span></td><td style="white-space:nowrap">${acoes}</td></tr>`;
+    };
+    $('fila').innerHTML = FILA.length ? `<table class="t"><thead><tr><th></th><th>Produto</th><th class="n">Clássico · margem</th><th class="n">Premium · margem</th><th>Situação</th><th></th></tr></thead><tbody>${[...ab, ...feitos.slice(0, 50)].map(linha).join('')}</tbody></table>`
+        : '<div class="vazio">A fila está vazia. Marque produtos abaixo ou envie uma planilha de SKUs.</div>';
+}
+function trocar(id, st) { const x = FILA.find(y => y.id === id && y.status !== 'criado'); if (x) { x.status = st; desenharFila(); } }
+function pôr(r) { const i = FILA.findIndex(y => y.id === r.id && y.status !== 'criado'); if (i >= 0) FILA[i] = r; desenharFila(); }
+async function validar(id) { trocar(id, 'validando'); try { pôr(await post(`/api/ad/premium-gerar/${id}/validar`)); } catch (e) { alert(e.message); carregarFila(); } }
+async function validarLista(ids) { for (const id of ids) await validar(id); }
+async function validarTodos() { $('btValTodos').disabled = true; await validarLista(FILA.filter(x => x.status === 'na_fila' || x.status === 'com_erro').map(x => x.id)); $('btValTodos').disabled = false; }
+async function editar(id, v) { try { pôr(await post(`/api/ad/premium-gerar/${id}/editar`, { preco: v })); pôr(await post(`/api/ad/premium-gerar/${id}/recalcular`)); await validar(id); } catch (e) { alert(e.message); carregarFila(); } }
+async function remover(id) { try { FILA = (await post(`/api/ad/premium-gerar/${id}/remover`)).fila; desenharFila(); carregarCand(false); } catch (e) { alert(e.message); } }
+async function criar(id) { trocar(id, 'aprovando'); try { const r = await post(`/api/ad/premium-gerar/${id}/aprovar`); const i = FILA.findIndex(y => y.id === id && y.status === 'aprovando'); if (i >= 0) FILA[i] = r; desenharFila(); return r; } catch (e) { alert(e.message); carregarFila(); } }
+async function aprovar(id) {
+    const x = FILA.find(y => y.id === id && y.status !== 'criado'); if (!x) return;
+    if (!confirm(`Adicionar a opção de venda PREMIUM no Mercado Livre?\n\n${x.titulo}\nSKU ${x.sku || '—'} · preço ${brl(x.preco)} (margem ${pct(x.margem_premium)})\n\nEstoque, ficha e fotos são os do produto. O Clássico ${x.id} não muda.`)) return;
+    await criar(id); carregarCand(false);
+}
+async function aprovarValidados() {
+    const L = FILA.filter(x => x.status === 'validado'); if (!L.length) return alert('Nenhum anúncio conferido na fila.');
+    if (!confirm(`Adicionar a opção PREMIUM em ${L.length} produto(s) no Mercado Livre?\n\n${L.slice(0, 12).map(x => `• ${x.sku || x.id} · ${brl(x.preco)} (margem ${pct(x.margem_premium)})`).join('\n')}${L.length > 12 ? '\n…' : ''}\n\nOs Clássicos não mudam.`)) return;
+    $('btAprTodos').disabled = true;
+    for (const x of L) await criar(x.id);
+    $('btAprTodos').disabled = false; carregarCand(false);
+}
+carregarFila(); carregarCand(false);
+document.body.classList.add('page-ready');
+</script>
+<script src="/assets/js/sidebar.js"></script>
+</body>
+</html>

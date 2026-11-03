@@ -1,5 +1,11 @@
 [
   {
+    "versao": "1.6.151",
+    "data": "2026-11-03",
+    "titulo": "AD HEALTH: Gerar Premium (opção de venda Premium sem recriar o anúncio)",
+    "texto": "- Nova aba AD HEALTH > Gerar Premium: lista os produtos que só têm anúncio Clássico e acrescenta a opção de venda Premium no MESMO produto do Mercado Livre, sem recriar o anúncio. Estoque, Full, ficha técnica, fotos e título continuam os do produto.\n- Escolha marcando na lista ou enviando uma planilha com a coluna SKU (e PRECO, se quiser fixar o preço).\n- Preço sugerido para a margem do Premium ficar 1 ponto acima da do Clássico; dá para editar, e a margem é recalculada na hora.\n- Antes de qualquer coisa ir para o ML, o SEVEN confere: o produto existe, ainda não tem Premium, o Clássico está ativo ou pausado, e avisa se o preço ou a margem do Premium ficaram abaixo do Clássico.\n- Só o que passou na conferência pode ser aprovado. Na hora de aprovar, o SEVEN confere de novo se o produto já ganhou Premium (não duplica).\n- Anúncios com variações do modelo antigo do ML ficam de fora (faça pelo ML)."
+  },
+  {
     "versao": "1.6.150",
     "data": "2026-11-03",
     "titulo": "Agenda do Full: vigias mais confiáveis",
