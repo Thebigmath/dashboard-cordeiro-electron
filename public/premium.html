@@ -52,6 +52,10 @@
         .vazio { color:var(--l3); font-size:13.5px; padding:14px 4px; }
         .aviso { background:color-mix(in srgb, var(--amarelo) 13%, transparent); border:1px solid color-mix(in srgb, var(--amarelo) 45%, transparent); border-radius:10px; padding:9px 12px; font-size:13px; color:var(--l1); margin:0 0 14px; line-height:1.5; }
         .up { color:var(--l3); font-size:11.5px; }
+        .aviso.barrado { background:color-mix(in srgb, var(--verm) 10%, transparent); border-color:color-mix(in srgb, var(--verm) 45%, transparent); }
+        .aviso.barrado ul { margin:6px 0; padding-left:20px; }
+        .aviso.barrado a { color:var(--l1); }
+        .msg .ok { color:var(--verde); }
         @media (max-width: 1000px) { .passos { grid-template-columns:1fr 1fr; } .pg { padding:16px; } }
     </style>
 <script src="/assets/js/shell.js"></script>
@@ -150,16 +154,21 @@ async function enviarPlanilha(inp) {
 }
 
 // ---- fila ----
-const ST = { na_fila: ['nao', 'aguardando conferência'], validando: ['off', 'conferindo…'], validado: ['ok', 'conferido'], com_erro: ['err', 'com problema'], aprovando: ['off', 'criando…'], criado: ['ok', 'Premium adicionado'] };
-async function carregarFila() { try { FILA = (await j('/api/ad/premium-gerar')).fila; } catch { return; } desenharFila(); }
+const ST = { na_fila: ['nao', 'aguardando conferência'], validando: ['off', 'conferindo…'], validado: ['ok', 'conferido'], com_erro: ['err', 'com problema'], aprovando: ['off', 'criando…'], criado: ['ok', 'Premium adicionado'], barrado: ['err', 'Barrado pelo ML'] };
+async function carregarFila() { try { FILA = (await j('/api/ad/premium-gerar')).fila; } catch { return; } desenharFila(); conferirML(false); }
+// situacao no ML dos Premium criados: o ML pode barrar depois de criar (ex.: motivos fiscais)
+async function conferirML(forcar) { try { FILA = (await j('/api/ad/premium-gerar/situacao' + (forcar ? '?forcar=1' : ''))).fila; desenharFila(); } catch {} }
 function desenharFila() {
     const ab = FILA.filter(x => x.status !== 'criado'), feitos = FILA.filter(x => x.status === 'criado');
     $('filaCont').textContent = `· ${ab.length} na fila · ${ab.filter(x => x.status === 'validado').length} conferidos · ${feitos.length} adicionados`;
     const sep = feitos.filter(x => x.criado && !x.criado.mesmo_produto);
-    $('avisoUp').innerHTML = sep.length ? `<div class="aviso"><b>Atenção:</b> ${sep.length} Premium voltou(aram) do ML ligado(s) a outro produto: ${sep.map(x => esc(x.criado.id)).join(', ')}. Confira no ML antes de seguir.</div>` : '';
+    const barr = feitos.filter(x => x.ml && x.ml.barrado);
+    $('avisoUp').innerHTML = (sep.length ? `<div class="aviso"><b>Atenção:</b> ${sep.length} Premium voltou(aram) do ML ligado(s) a outro produto: ${sep.map(x => esc(x.criado.id)).join(', ')}. Confira no ML antes de seguir.</div>` : '')
+        + (barr.length ? `<div class="aviso barrado"><b><i class="bi bi-exclamation-octagon"></i> ${barr.length === 1 ? '1 Premium foi barrado' : barr.length + ' Premium foram barrados'} pelo Mercado Livre</b> (criados, mas não estão à venda):<ul>${barr.map(x => `<li><b>${esc(x.sku || x.id)}</b> · <a href="${esc(x.criado.permalink || '#')}" target="_blank">${esc(x.criado.id)}</a> · ${esc(x.ml.motivo)}</li>`).join('')}</ul>O que fazer: abra o anúncio no ML e veja se há a opção de corrigir ou reativar; se não houver, abra um chamado no suporte do ML. Enquanto isso, evite gerar Premium de produtos parecidos (pares e kits).</div>` : '');
     const linha = (x) => {
-        const s = ST[x.status] || ['off', x.status], v = x.validacao || {};
-        const msg = x.status === 'criado' ? `<div class="msg">${x.criado.mesmo_produto ? '<i class="bi bi-link-45deg"></i> no mesmo produto do Clássico (estoque compartilhado)' : `<span class="err">${esc(x.criado.aviso)}</span>`} · ${esc((x.criado.passos || []).join(' · '))}</div>`
+        const s = x.status === 'criado' && x.ml && x.ml.barrado ? ST.barrado : ST[x.status] || ['off', x.status], v = x.validacao || {};
+        const msg = x.status === 'criado' && x.ml && x.ml.barrado ? `<div class="msg err"><i class="bi bi-exclamation-octagon"></i> Barrado pelo ML: ${esc(x.ml.motivo)} · no ML: ${esc(x.ml.status)}, estoque ${x.ml.estoque ?? '—'}</div>`
+            : x.status === 'criado' ? `<div class="msg">${x.ml ? (x.ml.status === 'active' ? `<span class="ok">ativo no ML · estoque ${x.ml.estoque ?? '—'}</span> · ` : `no ML: ${esc(x.ml.status)} · estoque ${x.ml.estoque ?? '—'} · `) : ''}${x.criado.mesmo_produto ? '<i class="bi bi-link-45deg"></i> no mesmo produto do Clássico (estoque compartilhado)' : `<span class="err">${esc(x.criado.aviso)}</span>`} · ${esc((x.criado.passos || []).join(' · '))}</div>`
             : v.erro ? `<div class="msg err">${esc(v.erro)}</div>` : (v.avisos || []).length ? `<div class="msg av">${esc(v.avisos.join(' · '))}</div>` : x.aviso ? `<div class="msg av">${esc(x.aviso)}</div>` : '';
         const acoes = x.status === 'criado' ? `<a class="bt sec mini" href="${esc(x.criado.permalink || '#')}" target="_blank"><i class="bi bi-box-arrow-up-right"></i> ${esc(x.criado.id)}</a>`
             : `<button class="bt sec mini" onclick="validar('${x.id}')"><i class="bi bi-shield-check"></i> Conferir</button>

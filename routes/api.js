@@ -1372,6 +1372,7 @@ router.post('/seven/preco/:item/ia', auth, (req, res) => { require('../lib/preco
 const PG = () => require('../lib/premium_gerar');
 router.get('/ad/premium-gerar/candidatos', auth, (req, res) => { PG().candidatos({ forcar: req.query.forcar === '1' }).then(d => res.json(d)).catch(erroJson(res)); });
 router.get('/ad/premium-gerar', auth, (req, res) => { try { res.json(PG().lista()); } catch (e) { erroJson(res)(e); } });
+router.get('/ad/premium-gerar/situacao', auth, (req, res) => { PG().situacao({ forcar: req.query.forcar === '1' }).then(d => res.json(d)).catch(erroJson(res)); });
 router.post('/ad/premium-gerar', auth, (req, res) => { PG().adicionar(req.body || {}).then(d => res.json(d)).catch(erroJson(res)); });
 router.post('/ad/premium-gerar/planilha', auth, upload.single('planilha'), (req, res) => {
     if (!req.file) return res.status(400).json({ erro: 'Nenhum arquivo enviado' });
