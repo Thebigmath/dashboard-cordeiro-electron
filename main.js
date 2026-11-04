@@ -196,6 +196,9 @@ app.whenReady().then(() => {
             setTimeout(() => verificarUpdate(), 5000);
         });
         mainWindow.on('show', () => verificarUpdate(5 * 60 * 1000));
+        // 04/11/2026: ao voltar para a janela (depois do Chrome da Agenda do Full, do aviso de estoque, de uma notificacao), devolve o teclado
+        // a pagina. Sem isso, no Windows, os campos as vezes ficavam travados ate trocar de pagina.
+        mainWindow.on('focus', () => { try { mainWindow.webContents.focus(); } catch {} });
 
         // O X esconde: o servidor e o monitor de frete continuam na bandeja.
         // Sair de verdade só pelo menu da bandeja (ou ao instalar atualização).

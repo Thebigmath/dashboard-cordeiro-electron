@@ -252,15 +252,15 @@ function desenharPermissao() {
         : `<i class="bi bi-shield-lock"></i> Marcação pelo SEVEN <b>desligada</b>: o SEVEN só vigia e avisa; nada é marcado. <button class="bt mini" onclick="mudarPermissao(true)">Permitir que o SEVEN marque</button>`;
 }
 async function mudarPermissao(ligar) {
-    if (ligar && !confirm('Permitir que o SEVEN marque horários no Mercado Livre?\n\n- O botão Confirmar passa a marcar na hora.\n- Vigias com "Marcar sozinho" marcam a primeira vaga DENTRO do dia, horário e galpões que vocês definiram, avisando "estou marcando".\n\nFora disso, nada é marcado.')) return;
-    try { await post('/api/agenda-full/permissao', { ligar }); } catch (e) { alert(e.message); }
+    if (ligar && !(await agConfirmar('Permitir que o SEVEN marque horários no Mercado Livre?\n\n- O botão Confirmar passa a marcar na hora.\n- Vigias com "Marcar sozinho" marcam a primeira vaga DENTRO do dia, horário e galpões que vocês definiram, avisando "estou marcando".\n\nFora disso, nada é marcado.', 'Permitir'))) return;
+    try { await post('/api/agenda-full/permissao', { ligar }); } catch (e) { await agAviso(e.message); }
     await carregarEstado(false); carregarVigias();
 }
-async function abrirPasta() { try { const r = await post('/api/agenda-full/extensao/abrir'); document.getElementById('cxTexto').insertAdjacentHTML('beforeend', `<div style="font-size:12px;margin-top:6px">Pasta: <code>${esc(r.pasta)}</code></div>`); } catch (e) { alert(e.message); } }
-function copiarExt(btn) { navigator.clipboard.writeText('chrome://extensions').then(() => { btn.innerHTML = '<i class="bi bi-check2"></i> Copiado'; setTimeout(() => btn.innerHTML = '<i class="bi bi-clipboard"></i> Copiar chrome://extensions', 2500); }).catch(() => prompt('Copie:', 'chrome://extensions')); }
-async function conectar() { try { await post('/api/agenda-full/conectar'); } catch (e) { alert(e.message); } carregarEstado(false); }
-async function esconder() { try { await post('/api/agenda-full/esconder'); } catch (e) { alert(e.message); } setTimeout(() => carregarEstado(true), 1500); }
-async function fecharChrome() { if (!confirm('Fechar o Chrome da Agenda do Full? As vigias ativas reabrem ele sozinhas.')) return; await post('/api/agenda-full/fechar').catch(() => {}); carregarEstado(false); }
+async function abrirPasta() { try { const r = await post('/api/agenda-full/extensao/abrir'); document.getElementById('cxTexto').insertAdjacentHTML('beforeend', `<div style="font-size:12px;margin-top:6px">Pasta: <code>${esc(r.pasta)}</code></div>`); } catch (e) { await agAviso(e.message); } }
+function copiarExt(btn) { navigator.clipboard.writeText('chrome://extensions').then(() => { btn.innerHTML = '<i class="bi bi-check2"></i> Copiado'; setTimeout(() => btn.innerHTML = '<i class="bi bi-clipboard"></i> Copiar chrome://extensions', 2500); }).catch(() => agAviso('Copie e cole no Chrome: chrome://extensions')); }
+async function conectar() { try { await post('/api/agenda-full/conectar'); } catch (e) { await agAviso(e.message); } carregarEstado(false); }
+async function esconder() { try { await post('/api/agenda-full/esconder'); } catch (e) { await agAviso(e.message); } setTimeout(() => carregarEstado(true), 1500); }
+async function fecharChrome() { if (!(await agConfirmar('Fechar o Chrome da Agenda do Full? As vigias ativas reabrem ele sozinhas.', 'Fechar'))) return; await post('/api/agenda-full/fechar').catch(() => {}); carregarEstado(false); }
 
 // ---- envios ----
 const ABERTOS = (e) => ['working', 'confirmed'].includes(e.status);
@@ -369,13 +369,13 @@ async function criarVigia() {
     } catch (err) { msg.textContent = err.message; }
 }
 async function acaoVigia(id, acao) {
-    if (acao === 'apagar' && !confirm('Apagar esta vigia?')) return;
-    try { await post(`/api/agenda-full/vigias/${id}/${acao}`); } catch (e) { alert(e.message); }
+    if (acao === 'apagar' && !(await agConfirmar('Apagar esta vigia?', 'Apagar'))) return;
+    try { await post(`/api/agenda-full/vigias/${id}/${acao}`); } catch (e) { await agAviso(e.message); }
     carregarVigias();
 }
 async function confirmarVaga(id, chave) {
-    try { const r = await post(`/api/agenda-full/vigias/${id}/confirmar`, { chave }); alert('Marcado! ' + JSON.stringify(r.resposta || '').slice(0, 200)); fecharAlerta(); carregarEnvios(true); }
-    catch (e) { alert(e.message); }
+    try { const r = await post(`/api/agenda-full/vigias/${id}/confirmar`, { chave }); fecharAlerta(); carregarEnvios(true); agAviso('Marcado! ' + JSON.stringify(r.resposta || '').slice(0, 200)); }
+    catch (e) { await agAviso(e.message); }
     carregarVigias();
 }
 const nomeG = (id, t) => (t || id || '').replace('Centro logístico ', '');
@@ -422,6 +422,25 @@ async function carregarMotores() {
             <td>${x.ultima_em ? `há ${ha(x.ultima_em)}${x.ultima_ms != null ? ` · ${(x.ultima_ms / 1000).toFixed(1)} s` : ''}` : '—'}${x.erro ? `<div class="erro">${esc(x.erro)}</div>` : ''}</td>
             <td>${x.proxima_em ? (new Date(x.proxima_em) > new Date() ? `em ${Math.max(0, Math.round((new Date(x.proxima_em) - Date.now()) / 1000))} s` : 'agora') : '—'}</td></tr>`).join('')}</table>` : ''}`;
 }
+// ---- Confirmacao e aviso DENTRO da pagina (04/11/2026): o alert()/confirm()/prompt() nativo do Electron no Windows deixa os campos
+// (dia, horario, envio) sem responder ao teclado depois de alguns usos, ate trocar de pagina. Mesmo conserto da Clonagem (Flavia 1.9.134).
+function agDialogo(msg, botoes) {
+    return new Promise((resolve) => {
+        const f = document.createElement('div');
+        f.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;z-index:10000';
+        f.innerHTML = '<div style="background:var(--s1);border:1px solid var(--sep);border-radius:16px;padding:20px 22px;max-width:480px;width:calc(100% - 32px);box-shadow:0 20px 60px rgba(0,0,0,.4)"><div style="white-space:pre-wrap;font-size:14px;line-height:1.45;color:var(--l1)"></div><div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px"></div></div>';
+        f.firstChild.firstChild.textContent = msg;
+        const voltar = document.activeElement;
+        const fim = (v) => { document.removeEventListener('keydown', tecla, true); f.remove(); try { if (voltar && voltar.focus && document.contains(voltar)) voltar.focus(); } catch {} resolve(v); };
+        const tecla = (ev) => { if (ev.key === 'Escape') { ev.preventDefault(); ev.stopPropagation(); fim(false); } };
+        let ultimo = null;
+        botoes.forEach((b) => { const el = document.createElement('button'); el.type = 'button'; el.className = 'bt' + (b.pri ? ' pri' : ''); el.textContent = b.rotulo; el.onclick = () => fim(b.valor); f.firstChild.lastChild.appendChild(el); ultimo = el; });
+        document.addEventListener('keydown', tecla, true);
+        document.body.appendChild(f); ultimo.focus();
+    });
+}
+const agConfirmar = (msg, ok) => agDialogo(msg, [{ rotulo: 'Cancelar', valor: false }, { rotulo: ok || 'Confirmar', valor: true, pri: true }]);
+const agAviso = (msg) => agDialogo(msg, [{ rotulo: 'OK', valor: true, pri: true }]);
 function bip() { try { const c = new AudioContext(); [0, .25, .5].forEach(t => { const o = c.createOscillator(), g = c.createGain(); o.frequency.value = 880; o.connect(g); g.connect(c.destination); g.gain.setValueAtTime(.25, c.currentTime + t); o.start(c.currentTime + t); o.stop(c.currentTime + t + .18); }); } catch {} }
 function mostrarAlerta(v, a) {
     document.getElementById('alTexto').innerHTML = `Encontrei vaga para <b>${dataBr(a.slot_date)} às ${a.hora}</b> no <b>${esc(nomeG(a.galpao, a.galpao_titulo))}</b><br><span style="font-size:13px;color:var(--l3)">Envio #${esc(v.envio_id)} ${esc(v.envio_nome)}</span><br>Gostaria de confirmar?`;
@@ -435,7 +454,7 @@ function mostrarAlerta(v, a) {
     document.getElementById('alerta').classList.add('on'); bip();
 }
 // abre a tela de data do envio no Chrome da conta (pela extensao), para marcar na hora
-async function abrirML(id) { try { await post('/api/agenda-full/abrir-ml/' + id); } catch (e) { alert(e.message); } }
+async function abrirML(id) { try { await post('/api/agenda-full/abrir-ml/' + id); } catch (e) { await agAviso(e.message); } }
 function fecharAlerta() { document.getElementById('alerta').classList.remove('on'); }
 
 const hoje = new Date(); document.getElementById('fData').value = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}-${String(hoje.getDate()).padStart(2, '0')}`;

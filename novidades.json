@@ -2,8 +2,8 @@
   {
     "versao": "1.6.153",
     "data": "2026-11-04",
-    "titulo": "Gerar Premium: aviso dos Premium barrados pelo Mercado Livre",
-    "texto": "- O Gerar Premium agora confere no ML a situação de cada Premium já criado. Se o ML barrou depois de criar (ex.: \"Não está à venda por motivos fiscais\"), aparece um aviso vermelho no topo com o SKU, o anúncio e o motivo, e a linha fica como \"Barrado pelo ML\".\n- Os Premium liberados mostram \"ativo no ML\" e o estoque.\n- O que fazer com um barrado: abrir o anúncio no ML e ver se há a opção de corrigir ou reativar; se não houver, chamado no suporte do ML. Enquanto isso, evite gerar Premium de pares e kits."
+    "titulo": "Gerar Premium: aviso dos barrados pelo ML · Agenda do Full sem campos travados",
+    "texto": "- O Gerar Premium agora confere no ML a situação de cada Premium já criado. Se o ML barrou depois de criar (ex.: \"Não está à venda por motivos fiscais\"), aparece um aviso vermelho no topo com o SKU, o anúncio e o motivo, e a linha fica como \"Barrado pelo ML\".\n- Os Premium liberados mostram \"ativo no ML\" e o estoque.\n- O que fazer com um barrado: abrir o anúncio no ML e ver se há a opção de corrigir ou reativar; se não houver, chamado no suporte do ML. Enquanto isso, evite gerar Premium de pares e kits.\n- Agenda do Full: os campos (envio, dia, horário) não travam mais depois de um tempo com o app aberto. Os avisos e confirmações da tela agora aparecem dentro da própria página (antes eram janelas do Windows, que deixavam os campos sem responder ao teclado até trocar de página), e o app devolve o teclado à página sempre que você volta para a janela (depois do Chrome da agenda, do aviso de estoque ou de uma notificação)."
   },
   {
     "versao": "1.6.152",
