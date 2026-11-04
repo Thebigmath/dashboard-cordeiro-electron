@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Perguntas — Dashboard Cordeiro</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
+    <link href="assets/css/style.css" rel="stylesheet">
+    <style>
+        /* Perguntas: o robo (motor do Harvey) prepara a resposta pelo anuncio; alguem revisa e envia. Sem confirm/alert nativos (o Electron perde o teclado) */
+        body { opacity:0; transition:opacity .38s cubic-bezier(.22,1,.36,1); }
+        body.page-ready { opacity:1; }
+        .pg { --verde:#2E9E5B; --amarelo:#E8A200; --verm:#D92D20; --azul:#0a84ff; padding:22px 28px 40px; width:100%; box-sizing:border-box; overflow-y:auto; height:100vh; }
+        [data-theme="dark"] .pg { --verde:#34C77B; --amarelo:#FFC24A; --verm:#FF6B60; }
+        .topo { display:flex; align-items:center; gap:14px; flex-wrap:wrap; margin-bottom:6px; }
+        .topo h1 { font-size:28px; font-weight:700; color:var(--l1); margin:0; display:flex; align-items:center; gap:8px; }
+        .topo h1 .seta { color:var(--verde); font-size:22px; }
+        .topo .dir { margin-left:auto; display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+        .sub { color:var(--l2); font-size:14px; margin:0 0 16px; max-width:980px; line-height:1.5; }
+        .bt { display:inline-flex; align-items:center; gap:7px; padding:8px 16px; border-radius:999px; border:0; background:var(--verde); color:#fff; font-size:13.5px; font-weight:600; cursor:pointer; white-space:nowrap; }
+        .bt:disabled { opacity:.55; cursor:not-allowed; }
+        .bt.sec { background:transparent; color:var(--l1); border:1px solid var(--sep); }
+        .bt.mini { padding:4px 11px; font-size:12.5px; }
+        .bt.azul { background:var(--azul); }
+        .bt.verm { background:var(--verm); }
+        .status { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:14px; }
+        .status > div { background:var(--s1); border:1px solid var(--sep); border-radius:12px; padding:9px 14px; font-size:13px; color:var(--l2); }
+        .status b { color:var(--l1); font-size:15px; margin-right:3px; }
+        .modo { display:flex; align-items:center; gap:10px; }
+        .modo .pill { font-size:12px; }
+        .painel { border:1px solid var(--sep); border-radius:14px; background:var(--s1); padding:16px 18px; margin-bottom:14px; }
+        .painel h3 { font-size:13px; text-transform:uppercase; letter-spacing:.05em; color:var(--l3); margin:0 0 12px; font-weight:600; display:flex; align-items:center; gap:8px; }
+        .card-p { border:1px solid var(--sep); border-radius:12px; padding:12px 14px; margin-bottom:10px; background:var(--s2); }
+        .card-p .cab { display:flex; gap:10px; align-items:flex-start; }
+        .card-p img { width:44px; height:44px; object-fit:cover; border-radius:8px; background:var(--s1); flex:none; }
+        .card-p .prod { font-size:12.5px; color:var(--l3); }
+        .card-p .prod a { color:var(--l2); text-decoration:none; }
+        .card-p .q { font-size:15px; color:var(--l1); font-weight:600; margin:2px 0 0; }
+        .card-p textarea { width:100%; min-height:74px; margin-top:10px; border:1px solid var(--sep); border-radius:10px; background:var(--s1); color:var(--l1); padding:9px 11px; font-size:14px; resize:vertical; }
+        .card-p .acoes { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:8px; }
+        .card-p .info { font-size:12.5px; color:var(--l3); margin-top:6px; line-height:1.45; }
+        .pill { display:inline-block; font-size:11.5px; font-weight:600; border-radius:999px; padding:2px 9px; white-space:nowrap; }
+        .pill.ok { background:color-mix(in srgb, var(--verde) 16%, transparent); color:var(--verde); }
+        .pill.nao { background:color-mix(in srgb, var(--amarelo) 18%, transparent); color:var(--amarelo); }
+        .pill.err { background:color-mix(in srgb, var(--verm) 15%, transparent); color:var(--verm); }
+        .pill.off { background:var(--s1); color:var(--l3); border:1px solid var(--sep); }
+        .msg { font-size:12.5px; color:var(--l3); }
+        .msg.err { color:var(--verm); } .msg.ok { color:var(--verde); }
+        .vazio { color:var(--l3); font-size:13.5px; padding:10px 4px; }
+        .resp { font-size:13.5px; border-bottom:1px solid var(--sep); padding:8px 2px; }
+        .resp:last-child { border-bottom:0; }
+        .resp .p { color:var(--l1); font-weight:600; }
+        .resp .r { color:var(--l2); margin-top:2px; }
+        .resp .f { color:var(--l3); font-size:12px; margin-top:2px; }
+        .rolar { max-height:420px; overflow:auto; }
+        .confirma { background:color-mix(in srgb, var(--amarelo) 13%, transparent); border:1px solid color-mix(in srgb, var(--amarelo) 45%, transparent); border-radius:10px; padding:9px 12px; font-size:13px; color:var(--l1); display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+        @media (max-width: 900px) { .pg { padding:16px; } }
+    </style>
+<script src="/assets/js/shell.js"></script>
+</head>
+<body>
+<canvas id="canvas-bg"></canvas>
+<div class="aurora"><div class="aur-1"></div><div class="aur-2"></div><div class="aur-3"></div></div>
+<div class="d-flex"><main class="content"><div class="pg">
+    <div class="topo"><h1><span class="seta">›</span>Perguntas</h1>
+        <div class="dir"><button class="bt sec mini" id="btVer" onclick="verificarAgora()"><i class="bi bi-arrow-repeat"></i> Buscar perguntas agora</button></div></div>
+    <p class="sub">Um <b>robô</b> (o mesmo motor do Harvey) lê cada pergunta nova dos compradores, confere o anúncio (ficha, descrição, estoque, frete, garantia e o tipo de venda Clássico ou Premium), procura no nosso catálogo quando pedem outro carro ou lado e <b>prepara a resposta</b>. Você confere, ajusta se quiser e envia. Nada vai para o Mercado Livre sem você, a não ser que ligue o modo automático.</p>
+    <div class="status" id="status"><div>Carregando…</div></div>
+    <div id="confModo"></div>
+    <div class="painel">
+        <h3><i class="bi bi-chat-left-dots"></i> Para responder <span id="nAbertas"></span></h3>
+        <div id="abertas"><div class="vazio">Carregando…</div></div>
+    </div>
+    <div class="painel">
+        <h3><i class="bi bi-check2-circle"></i> Respondidas por aqui</h3>
+        <div id="respondidas" class="rolar"><div class="vazio">—</div></div>
+    </div>
+    <div class="painel">
+        <h3><i class="bi bi-archive"></i> Respondidas por fora ou ignoradas</h3>
+        <div id="outras" class="rolar"><div class="vazio">—</div></div>
+    </div>
+</div></main></div>
+<script>
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const quando = (iso) => iso ? new Date(iso).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '—';
+const j = (u) => fetch(u).then(async r => { const d = await r.json(); if (!r.ok || d.erro) throw new Error(d.erro || r.status); return d; });
+const post = (u, b) => fetch(u, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(b || {}) }).then(async r => { const d = await r.json(); if (!r.ok || d.erro) throw new Error(d.erro || r.status); return d; });
+let D = null;
+const rascunho = {};   // o que a pessoa digitou nao se perde quando a tela atualiza
+
+async function carregar() {
+    try { D = await j('/api/perguntas'); } catch (e) { $('abertas').innerHTML = `<div class="vazio">${esc(e.message)}</div>`; return; }
+    desenhar();
+}
+function desenhar() {
+    const e = D.estado || {};
+    $('status').innerHTML = `<div><b>${D.abertas.length}</b> para responder</div>
+        <div>Última busca: <b style="font-size:13px">${e.rodando ? 'buscando agora…' : quando(e.verificado_em)}</b>${e.erro ? ` <span class="pill err">${esc(e.erro)}</span>` : ''}</div>
+        <div>Aprendizado: <b>${D.aprendizado.total}</b> respostas reais da equipe</div>
+        <div class="modo">Modo automático: ${D.automatico ? '<span class="pill ok">LIGADO</span>' : '<span class="pill off">desligado</span>'}
+            <button class="bt sec mini" onclick="pedirModo(${!D.automatico})">${D.automatico ? 'Desligar' : 'Ligar'}</button></div>`;
+    $('nAbertas').textContent = D.abertas.length ? `· ${D.abertas.length}` : '';
+    $('abertas').innerHTML = D.abertas.length ? D.abertas.map(cartao).join('') : '<div class="vazio">Nenhuma pergunta esperando resposta.</div>';
+    for (const r of D.abertas) { const t = $('t_' + r.id); if (t && rascunho[r.id] != null) t.value = rascunho[r.id]; }
+    $('respondidas').innerHTML = D.respondidas.length ? D.respondidas.map(r => `<div class="resp"><div class="p">${esc(r.texto)}</div><div class="r">${esc(r.resposta_enviada)}</div>
+        <div class="f">${esc(r.ia?.produto_titulo || r.item_id)} · ${quando(r.enviada_em)} · ${r.automatica ? 'enviada pelo robô' : 'revisada e enviada'}</div></div>`).join('') : '<div class="vazio">Nenhuma ainda.</div>';
+    $('outras').innerHTML = D.outras.length ? D.outras.map(r => `<div class="resp"><div class="p">${esc(r.texto)}</div>
+        <div class="f">${esc(r.ia?.produto_titulo || r.item_id)} · ${quando(r.criado)} · ${r.status === 'ignorada' ? 'ignorada' : 'respondida fora do SEVEN (site, celular ou Harvey)'}</div></div>`).join('') : '<div class="vazio">Nenhuma.</div>';
+}
+function cartao(r) {
+    const a = r.ia;
+    if (r.status === 'analisando') return `<div class="card-p"><div class="cab"><div><div class="prod">${esc(r.item_id)} · ${quando(r.criado)}</div><div class="q">${esc(r.texto)}</div></div></div>
+        <div class="info"><span class="spinner-border spinner-border-sm"></span> O robô está lendo o anúncio e preparando a resposta…</div></div>`;
+    const conf = !a ? '' : a.confianca === 'alta' && !a.precisa_humano ? '<span class="pill ok">robô com certeza</span>' : a.confianca === 'media' ? '<span class="pill nao">certeza média</span>' : '<span class="pill err">precisa de você</span>';
+    const cat = a?.catalogo ? ` · buscou no catálogo "${esc(a.catalogo.busca)}" (${a.catalogo.itens.length} anúncio(s))` : '';
+    return `<div class="card-p" id="c_${r.id}"><div class="cab">${a?.produto_foto ? `<img src="${esc(a.produto_foto)}" alt="">` : ''}
+        <div style="min-width:0"><div class="prod">${a?.produto_link ? `<a href="${esc(a.produto_link)}" target="_blank">${esc(a.produto_titulo)}</a>` : esc(r.item_id)} · ${esc(a?.tipo_de_venda || '')}${a?.estoque != null ? ` · estoque ${a.estoque}` : ''} · ${quando(r.criado)}</div>
+        <div class="q">${esc(r.texto)}</div></div></div>
+        <textarea id="t_${r.id}" oninput="rascunho['${r.id}']=this.value" placeholder="Escreva a resposta">${esc(a?.resposta || '')}</textarea>
+        <div class="info">${conf} ${esc(r.motivo || a?.motivo || '')}${a?.base ? ` · base: ${esc(a.base)}` : ''}${cat}</div>
+        <div class="acoes" id="ac_${r.id}">
+            <button class="bt mini" onclick="pedirEnvio('${r.id}')"><i class="bi bi-send"></i> Enviar resposta</button>
+            <button class="bt sec mini" onclick="gerar('${r.id}')"><i class="bi bi-stars"></i> Robô, refaça</button>
+            <button class="bt sec mini" onclick="ignorar('${r.id}')"><i class="bi bi-eye-slash"></i> Ignorar</button>
+            <span class="msg" id="m_${r.id}"></span></div></div>`;
+}
+function pedirEnvio(id) {
+    const t = $('t_' + id).value.trim();
+    if (t.length < 2) { $('m_' + id).className = 'msg err'; $('m_' + id).textContent = 'A resposta está vazia.'; return; }
+    $('ac_' + id).innerHTML = `<div class="confirma">Enviar esta resposta ao comprador no Mercado Livre? <button class="bt mini" onclick="enviar('${id}')">Sim, enviar</button><button class="bt sec mini" onclick="desenhar()">Voltar</button><span class="msg" id="m_${id}"></span></div>`;
+}
+async function enviar(id) {
+    const t = $('t_' + id).value.trim();
+    $('m_' + id).className = 'msg'; $('m_' + id).textContent = 'Enviando…';
+    try { await post('/api/perguntas/responder', { id, texto: t }); delete rascunho[id]; await carregar(); }
+    catch (e) { $('m_' + id).className = 'msg err'; $('m_' + id).textContent = e.message; setTimeout(carregar, 2500); }
+}
+async function gerar(id) {
+    $('m_' + id).className = 'msg'; $('m_' + id).textContent = 'O robô está relendo o anúncio…';
+    try { await post(`/api/perguntas/${id}/gerar`); delete rascunho[id]; await carregar(); }
+    catch (e) { $('m_' + id).className = 'msg err'; $('m_' + id).textContent = e.message; }
+}
+async function ignorar(id) { await post(`/api/perguntas/${id}/ignorar`).catch(() => {}); delete rascunho[id]; carregar(); }
+function pedirModo(ligar) {
+    $('confModo').innerHTML = ligar
+        ? `<div class="confirma" style="margin-bottom:14px">Ligar o modo automático? O robô passa a <b>enviar sozinho</b> só as respostas em que tem certeza: confirmadas no anúncio, sem contato ou link de fora e sem resposta negativa. As outras continuam esperando você. <button class="bt mini" onclick="mudarModo(true)">Sim, ligar</button><button class="bt sec mini" onclick="$('confModo').innerHTML=''">Cancelar</button></div>`
+        : `<div class="confirma" style="margin-bottom:14px">Desligar o modo automático? O robô volta a só preparar as respostas. <button class="bt mini" onclick="mudarModo(false)">Sim, desligar</button><button class="bt sec mini" onclick="$('confModo').innerHTML=''">Cancelar</button></div>`;
+}
+async function mudarModo(v) { await post('/api/perguntas/automatico', { ligado: v }).catch(() => {}); $('confModo').innerHTML = ''; carregar(); }
+async function verificarAgora() {
+    $('btVer').disabled = true;
+    await post('/api/perguntas/verificar').catch(() => {});
+    setTimeout(carregar, 1500); setTimeout(() => { carregar(); $('btVer').disabled = false; }, 12000);
+}
+carregar();
+// atualiza sozinho, sem atrapalhar quem esta digitando ou confirmando
+setInterval(() => { const ativo = document.activeElement; if (ativo && ativo.tagName === 'TEXTAREA') return; if (document.querySelector('.acoes .confirma')) return; carregar(); }, 20000);
+document.body.classList.add('page-ready');
+</script>
+<script src="/assets/js/sidebar.js"></script>
+</body>
+</html>

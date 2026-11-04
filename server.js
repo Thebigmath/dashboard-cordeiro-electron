@@ -81,6 +81,7 @@ app.get('/finance-planilha', (req, res) => res.sendFile(path.join(__dirname, 'pu
 app.get('/finance', (req, res) => res.sendFile(path.join(__dirname, 'public/finance.html')));
 app.get('/anuncios', (req, res) => res.sendFile(path.join(__dirname, 'public/anuncios.html')));
 app.get('/premium', (req, res) => res.sendFile(path.join(__dirname, 'public/premium.html')));
+app.get('/perguntas', (req, res) => res.sendFile(path.join(__dirname, 'public/perguntas.html')));
 // a tela antiga de Parados esta em standby (dependia da ponte do Nubimetrics): vai para o Controle de estoque parado
 app.get('/parados', (req, res) => res.redirect('/seven#parados'));
 app.get('/metricas-stock', (req, res) => res.sendFile(path.join(__dirname, 'public/metricas_stock.html')));
@@ -115,6 +116,7 @@ module.exports = {
         // ranking ML: so leitura - a coleta e feita pelo app da Flavia (lib/ranking_mt.js)
         require('./lib/ranking_mt').iniciarAgendador();
         require('./lib/motor_preco').iniciarAgendador();
+        require('./lib/perguntas_robo').iniciarAgendador();   // aba Perguntas: o robo prepara as respostas (a cada 2 min)
         require('./lib/coleta_manha').iniciarAgendador(port);   // coleta do dia a partir das 7h, sem abrir o AD HEALTH (destrava a rodada do motor de preco)
         require('./lib/flex_auto').iniciarAgendador();
         require('./lib/reputacao_previsao').iniciarAgendador();   // reputacao: coleta e previsao do Platinum a cada 6 h (a partir das 7h)
@@ -132,6 +134,7 @@ module.exports = {
         require('./lib/avisos').pararAgendador();
         require('./lib/ranking_mt').pararAgendador();
         require('./lib/motor_preco').pararAgendador();
+        require('./lib/perguntas_robo').pararAgendador();
         require('./lib/flex_auto').pararAgendador();
         require('./lib/reputacao_previsao').pararAgendador();
         require('./lib/belvo').pararAgendador();

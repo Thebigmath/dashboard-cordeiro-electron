@@ -1125,16 +1125,16 @@ router.post('/frete/config', auth, (req, res) => res.json(frete.salvarConfigurac
 router.post('/frete/testar_notificacao', auth, (req, res) => { frete.notificarTeste(); res.json({ ok: true }); });
 
 // ── Perguntas do Mercado Livre ──────────────────────────────────────────────
-router.get('/perguntas', auth, async (req, res) => {
-    try { res.json(await perguntas.listar()); }
-    catch (e) { res.status(500).json({ erro: String(e.response?.data?.message || e.message) }); }
-});
-router.get('/perguntas/resumo', auth, (req, res) => res.json(perguntas.resumo()));
-router.post('/perguntas/verificar', auth, async (req, res) => res.json(await perguntas.verificar({ origem: 'manual' })));
-router.post('/perguntas/responder', auth, async (req, res) => {
-    try { await perguntas.responder(req.body?.id, req.body?.texto); res.json({ ok: true }); }
-    catch (e) { res.status(400).json({ ok: false, erro: String(e.response?.data?.message || e.message) }); }
-});
+// 04/11/2026: a aba Perguntas e mediada pelo robo (lib/perguntas_robo.js, motor do Harvey); o robo prepara e alguem aprova
+const robo = () => require('../lib/perguntas_robo');
+const erroPerg = (res, st = 400) => (e) => res.status(st).json({ ok: false, erro: String(e.response?.data?.message || e.message) });
+router.get('/perguntas', auth, (req, res) => { try { res.json(robo().listar()); } catch (e) { erroPerg(res, 500)(e); } });
+router.get('/perguntas/resumo', auth, (req, res) => res.json(robo().resumo()));
+router.post('/perguntas/verificar', auth, (req, res) => { robo().verificar({ origem: 'manual' }).catch(() => {}); res.json({ ok: true, iniciado: true }); });
+router.post('/perguntas/automatico', auth, (req, res) => res.json({ ok: true, automatico: robo().setAutomatico(!!(req.body || {}).ligado) }));
+router.post('/perguntas/responder', auth, (req, res) => { robo().responder(String(req.body?.id || ''), req.body?.texto).then(p => res.json({ ok: true, pergunta: p })).catch(erroPerg(res)); });
+router.post('/perguntas/:id/gerar', auth, (req, res) => { robo().gerarDeNovo(req.params.id).then(p => res.json({ ok: true, pergunta: p })).catch(erroPerg(res)); });
+router.post('/perguntas/:id/ignorar', auth, (req, res) => res.json(robo().ignorar(req.params.id)));
 
 // ── Reputação no ML ─────────────────────────────────────────────────────────
 

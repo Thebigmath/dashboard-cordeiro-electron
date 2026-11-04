@@ -1,5 +1,11 @@
 [
   {
+    "versao": "1.6.152",
+    "data": "2026-11-04",
+    "titulo": "AD HEALTH: aba Perguntas com robô e fim da trava do \"dia bom isolado\"",
+    "texto": "- Nova aba AD HEALTH > Perguntas: um robô (o mesmo motor do Harvey) lê cada pergunta nova dos compradores, confere o anúncio (ficha, descrição, estoque, frete, garantia e o tipo de venda Clássico ou Premium), procura no nosso catálogo quando pedem outro carro ou lado e prepara a resposta.\n- Você confere, ajusta se quiser e envia. O robô aprende com as respostas reais que a equipe já deu no Mercado Livre.\n- Clássico x Premium: se perguntarem de parcelamento sem juros num anúncio Clássico e o mesmo produto tiver Premium, o robô indica o link do Premium.\n- Modo automático disponível, mas começa desligado: ligado, o robô só envia sozinho o que tem certeza (confirmado no anúncio, sem contato ou link de fora, sem resposta negativa).\n- Análise com IA / motor de preço: saiu a trava do \"dia bom isolado\". Venda esporádica (média/dia baixa) não segura mais a subida: se bateu a regra de ontem, a subida vale. As outras travas (promoção, R$ 79, líder, estoque) continuam."
+  },
+  {
     "versao": "1.6.151",
     "data": "2026-11-03",
     "titulo": "AD HEALTH: Gerar Premium (opção de venda Premium sem recriar o anúncio)",
