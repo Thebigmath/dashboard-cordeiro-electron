@@ -1,5 +1,11 @@
 [
   {
+    "versao": "1.6.154",
+    "data": "2026-11-05",
+    "titulo": "Fim do erro 403 na aba Anúncios",
+    "texto": "- O Mercado Livre está desligando a consulta de vários anúncios de uma vez (GET /items?ids=) e, em alguns momentos, já respondia \"403 ResourceDeprecated\". Era o \"Request failed with status code 403\" que aparecia em Anúncios.\n- Todo o SEVEN passou a usar a consulta nova do ML (/items/bulk): Anúncios, Gerar Premium, Perguntas, Parados, Promoções, Frete, ERP Commander e os outros motores. Nada muda nas telas."
+  },
+  {
     "versao": "1.6.153",
     "data": "2026-11-04",
     "titulo": "Gerar Premium: aviso dos barrados pelo ML · Agenda do Full sem campos travados",

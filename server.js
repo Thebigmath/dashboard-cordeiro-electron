@@ -1,6 +1,7 @@
 const express = require('express');
 const path = require('path');
 const fs = require('fs');
+require('./lib/ml_bulk');   // 05/11/2026: GET /items?ids= (multiget) -> /items/bulk em todo o app (o ML esta desligando o antigo: 403 ResourceDeprecated)
 
 const STORAGE = process.env.STORAGE_PATH || path.join(__dirname, 'storage');
 
