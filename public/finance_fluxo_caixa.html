@@ -74,6 +74,30 @@
         .det .lin { display:flex; gap:22px; flex-wrap:wrap; margin-bottom:10px; font-size:14px; color:var(--l2); }
         .det .lin b { color:var(--l1); font-variant-numeric:tabular-nums; margin-left:4px; }
         .det table { width:100%; border-collapse:collapse; font-size:13.5px; }
+        /* historico do extrato (06/11/2026): tudo o que entrou e saiu do banco (Belvo), logo abaixo do calendario */
+        .hx { background:var(--s1); border:1px solid var(--sep); border-radius:14px; padding:14px 16px; margin:14px 0; }
+        .hx-topo { display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:10px; }
+        .hx-topo h3 { font-size:16px; margin:0; color:var(--l1); display:flex; align-items:baseline; gap:8px; }
+        .hx-topo h3 small { font-size:12px; color:var(--l3); font-weight:400; }
+        .hx-f { display:flex; gap:6px; flex-wrap:wrap; align-items:center; margin-left:auto; }
+        .hx-ch { border:1px solid var(--sep); background:transparent; color:var(--l1); border-radius:999px; padding:5px 12px; font-size:13px; cursor:pointer; }
+        .hx-ch.on { border-color:var(--azul); color:var(--azul); box-shadow:0 0 0 2px rgba(31,95,209,.15); }
+        .hx-f select, .hx-f input { height:32px; border:1px solid var(--sep); border-radius:999px; background:var(--s2); color:var(--l1); padding:0 12px; font-size:13px; }
+        .hx-f input { min-width:220px; }
+        .hx-link { font-size:13px; color:var(--azul); text-decoration:none; white-space:nowrap; }
+        .hx-cards { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; margin-bottom:10px; }
+        .hx-cards div { background:var(--s2); border:1px solid var(--sep); border-radius:12px; padding:9px 12px; }
+        .hx-cards small { display:block; color:var(--l2); font-size:12px; } .hx-cards b { font-size:18px; font-variant-numeric:tabular-nums; color:var(--l1); }
+        .hx-tab { max-height:520px; overflow:auto; }
+        .hx-tab table { width:100%; border-collapse:collapse; font-size:13.5px; }
+        .hx-tab th { position:sticky; top:0; background:var(--s1); text-align:left; font-weight:400; color:var(--l2); padding:6px 8px; border-bottom:1px solid var(--sep); white-space:nowrap; }
+        .hx-tab td { padding:7px 8px; border-bottom:1px solid var(--sep); color:var(--l1); vertical-align:top; }
+        .hx-tab td.n, .hx-tab th.n { text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; }
+        .hx-tab .ent { color:var(--verde-t); } .hx-tab .sai { color:var(--verm-t); }
+        .hx-tab tr.dia-sep td { background:var(--s2); font-weight:600; font-size:12.5px; color:var(--l2); }
+        .hx-tag { display:inline-block; font-size:11.5px; padding:1px 8px; border-radius:999px; background:var(--s2); color:var(--l2); border:1px solid var(--sep); white-space:nowrap; }
+        .hx-vazio { color:var(--l3); font-size:13.5px; padding:12px 4px; }
+        @media (max-width:900px) { .hx-cards { grid-template-columns:1fr 1fr; } .hx-f { margin-left:0; } .hx-f input { min-width:0; flex:1; } }
         .det th { text-align:left; font-weight:400; color:var(--l2); padding:6px 8px; border-bottom:1px solid var(--sep); } .det td { padding:7px 8px; border-bottom:1px solid var(--sep); color:var(--l1); }
         .det td.n, .det th.n { text-align:right; font-variant-numeric:tabular-nums; }
         .grafico { margin-top:16px; background:var(--caixa); border:1px solid var(--sep); border-radius:14px; padding:14px 18px 8px; }
@@ -126,6 +150,18 @@
     </div>
     <div class="grade" id="grade"></div>
     <div class="det" id="det" style="display:none"></div>
+    <div class="hx" id="hx">
+        <div class="hx-topo"><h3><i class="bi bi-bank"></i> Histórico do extrato <small id="hxSub"></small></h3>
+            <div class="hx-f" id="hxF">
+                <button class="hx-ch" data-p="hoje" onclick="hxPeriodo('hoje')">hoje</button><button class="hx-ch" data-p="u7" onclick="hxPeriodo('u7')">7 dias</button><button class="hx-ch" data-p="u30" onclick="hxPeriodo('u30')">30 dias</button><button class="hx-ch" data-p="mes" onclick="hxPeriodo('mes')">este mês</button><button class="hx-ch" data-p="mesant" onclick="hxPeriodo('mesant')">mês passado</button>
+                <span class="hx-ch on" id="hxDiaChip" style="display:none"></span>
+                <select id="hxTipo" onchange="hxCarregar()" aria-label="Entradas e saídas"><option value="">entradas e saídas</option><option value="INFLOW">só entradas</option><option value="OUTFLOW">só saídas</option></select>
+                <input id="hxQ" placeholder="Buscar descrição, fornecedor ou valor" aria-label="Buscar no extrato" oninput="clearTimeout(hxTq);hxTq=setTimeout(hxCarregar,350)">
+                <a class="hx-link" href="/finance-extrato">Extrato completo <i class="bi bi-box-arrow-up-right"></i></a>
+            </div></div>
+        <div id="hxRes"></div>
+        <div class="hx-tab" id="hxTab"></div>
+    </div>
     <div class="grafico"><h3>Saldo projetado dia a dia</h3><div id="graf"></div></div>
     <div class="nota" id="nota"></div>
 </div></main></div>
@@ -263,7 +299,48 @@ function calendario() {
     }
     $('grade').innerHTML = h;
 }
-function escolher(d) { escolhido = d; calendario(); detalhe(); }
+function escolher(d) { escolhido = d; calendario(); detalhe(); if (d <= somaDias(0)) hxDia(d); }   // dia passado: o historico do extrato mostra os movimentos dele
+
+// ---- historico do extrato (06/11/2026): tudo o que entrou e saiu do banco no periodo (Belvo, so leitura) ----
+let hxPer = 'u30', hxDiaSel = null, hxTq = null;
+function hxLimites() {
+    const hoje = somaDias(0), [a, m] = hoje.split('-').map(Number);
+    if (hxDiaSel) return [hxDiaSel, hxDiaSel];
+    if (hxPer === 'hoje') return [hoje, hoje]; if (hxPer === 'u7') return [somaDias(-6), hoje]; if (hxPer === 'u30') return [somaDias(-29), hoje];
+    if (hxPer === 'mes') return [hoje.slice(0, 7) + '-01', hoje];
+    const i = new Date(Date.UTC(a, m - 2, 1)), f = new Date(Date.UTC(a, m - 1, 0)); return [i.toISOString().slice(0, 10), f.toISOString().slice(0, 10)];
+}
+function hxPeriodo(p) { hxPer = p; hxDiaSel = null; hxCarregar(); }
+function hxDia(d) { hxDiaSel = d; hxCarregar(); }
+async function hxCarregar() {
+    const [de, ate] = hxLimites();
+    document.querySelectorAll('#hxF .hx-ch[data-p]').forEach(b => b.classList.toggle('on', !hxDiaSel && b.dataset.p === hxPer));
+    const chip = $('hxDiaChip'); chip.style.display = hxDiaSel ? '' : 'none'; if (hxDiaSel) chip.innerHTML = `dia ${dataBR(hxDiaSel)} <a style="cursor:pointer;margin-left:4px" onclick="hxPeriodo(hxPer)" title="voltar ao período">✕</a>`;
+    $('hxSub').textContent = de === ate ? dataBR(de) : `${dataBR(de)} a ${dataBR(ate)}`;
+    $('hxTab').innerHTML = '<div class="hx-vazio">Lendo o extrato…</div>';
+    let X;
+    try { X = await fetch(`/api/finance/belvo/extrato?de=${de}&ate=${ate}&tipo=${$('hxTipo').value}&q=${encodeURIComponent($('hxQ').value)}`).then(r => r.json()); }
+    catch (e) { $('hxRes').innerHTML = ''; $('hxTab').innerHTML = `<div class="hx-vazio">Não deu para ler o extrato: ${esc(e.message)}</div>`; return; }
+    if (!X || !X.lido) { $('hxRes').innerHTML = ''; $('hxTab').innerHTML = '<div class="hx-vazio"><i class="bi bi-bank"></i> O extrato do banco ainda não foi lido. Conecte a Belvo no quadro "Banco (Belvo)" acima e clique em "Atualizar dados".</div>'; return; }
+    const R = X.resumo || { entrou: 0, saiu: 0, liquido: 0, qtd: 0 };
+    $('hxRes').innerHTML = `<div class="hx-cards"><div><small>Entrou</small><b style="color:var(--verde-t)">${R$(R.entrou)}</b></div><div><small>Saiu</small><b style="color:var(--verm-t)">${R$(R.saiu)}</b></div>`
+        + `<div><small>Resultado (entrou − saiu)</small><b style="color:${R.liquido >= 0 ? 'var(--verde-t)' : 'var(--verm-t)'}">${R$(R.liquido)}</b></div><div><small>Movimentos</small><b>${R.qtd}</b></div></div>`
+        + (R.internas && R.internas.qtd ? `<div class="hx-vazio" style="padding:0 2px 8px"><i class="bi bi-arrow-left-right"></i> ${R.internas.qtd} movimento(s) interno(s) (reservas e transferências para a própria empresa) aparecem na lista, mas ficam fora dos totais.</div>` : '')
+        + (X.cortado ? '<div class="hx-vazio" style="padding:0 2px 8px">Mostrando os 1.000 movimentos mais recentes do período.</div>' : '')
+        + (X.parcial ? '<div class="hx-vazio" style="padding:0 2px 8px">Leitura do banco em andamento: o período ainda pode estar incompleto.</div>' : '');
+    const L = X.linhas || [];
+    if (!L.length) { $('hxTab').innerHTML = '<div class="hx-vazio">Nenhum movimento no período.</div>'; return; }
+    let dia = '', h = '<table><thead><tr><th>Hora</th><th>Tipo</th><th>Descrição</th><th class="n">Entrou</th><th class="n">Saiu</th></tr></thead><tbody>';
+    for (const x of L) {
+        if (x.dia !== dia) { dia = x.dia; const td = (X.dias || []).find(y => y.dia === dia); const doDia = L.filter(y => y.dia === dia && !y.interna);
+            const e = td ? td.entrou : doDia.filter(y => y.valor > 0).reduce((s, y) => s + y.valor, 0), s2 = td ? td.saiu : doDia.filter(y => y.valor < 0).reduce((s, y) => s + y.valor, 0);
+            h += `<tr class="dia-sep"><td colspan="3">${dataBR(dia)}</td><td class="n ent">${e ? R$(e) : ''}</td><td class="n sai">${s2 ? R$(s2) : ''}</td></tr>`; }
+        h += `<tr><td>${x.em ? new Date(x.em).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : ''}</td><td><span class="hx-tag">${esc(x.grupo || '')}</span>${x.interna ? ' <span class="hx-tag">interno</span>' : ''}</td>`
+            + `<td>${esc(x.desc || '')}${x.cnpj ? `<br><span style="color:var(--l3);font-size:11.5px">CNPJ ${esc(x.cnpj)}</span>` : ''}</td>`
+            + `<td class="n ent">${x.valor > 0 ? R$(x.valor) : ''}</td><td class="n sai">${x.valor < 0 ? R$(x.valor) : ''}</td></tr>`;
+    }
+    $('hxTab').innerHTML = h + '</tbody></table>';
+}
 function detalhe() {
     const el = $('det'), x = escolhido && PD[escolhido];
     if (!x) { el.style.display = 'none'; return; }
@@ -374,6 +451,7 @@ async function salvarSaldo() {
 async function usarAuto() { await fetch('/api/finance/fluxo-caixa/saldo', { method: 'DELETE' }).catch(() => {}); fecharSaldo(); carregar(); }
 
 (async () => { definirPeriodo({ p: 'p60' }); await carregar(); escolhido = D && D.hoje; if (D && !D.erro) { calendario(); detalhe(); } })();
+hxPeriodo('u30');
 document.body.classList.add('page-ready');
 </script>
 <script src="/assets/js/sidebar.js"></script>
