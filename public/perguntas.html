@@ -68,6 +68,7 @@
     <p class="sub">Um <b>robô</b> (o mesmo motor do Harvey) lê cada pergunta nova dos compradores, confere o anúncio (ficha, descrição, estoque, frete, garantia e o tipo de venda Clássico ou Premium), procura no nosso catálogo quando pedem outro carro ou lado e <b>prepara a resposta</b>. Você confere, ajusta se quiser e envia. Nada vai para o Mercado Livre sem você, a não ser que ligue o modo automático.</p>
     <div class="status" id="status"><div>Carregando…</div></div>
     <div id="confModo"></div>
+    <div id="aprendeuMsg"></div>
     <div class="painel">
         <h3><i class="bi bi-chat-left-dots"></i> Para responder <span id="nAbertas"></span></h3>
         <div id="abertas"><div class="vazio">Carregando…</div></div>
@@ -98,7 +99,7 @@ function desenhar() {
     const e = D.estado || {};
     $('status').innerHTML = `<div><b>${D.abertas.length}</b> para responder</div>
         <div>Última busca: <b style="font-size:13px">${e.rodando ? 'buscando agora…' : quando(e.verificado_em)}</b>${e.erro ? ` <span class="pill err">${esc(e.erro)}</span>` : ''}</div>
-        <div>Aprendizado: <b>${D.aprendizado.total}</b> respostas reais da equipe</div>
+        <div title="Cada resposta conferida e enviada por aqui ensina o robô; quando vocês mudam o texto dele, a correção vale mais.">Aprendizado: <b>${D.aprendizado.total}</b> respostas da equipe no ML · <b>${D.aprendizado.conferidas || 0}</b> conferidas aqui${D.aprendizado.corrigidas ? ` (${D.aprendizado.corrigidas} corrigidas)` : ''}</div>
         <div class="modo">Modo automático: ${D.automatico ? '<span class="pill ok">LIGADO</span>' : '<span class="pill off">desligado</span>'}
             <button class="bt sec mini" onclick="pedirModo(${!D.automatico})">${D.automatico ? 'Desligar' : 'Ligar'}</button></div>`;
     $('nAbertas').textContent = D.abertas.length ? `· ${D.abertas.length}` : '';
@@ -134,7 +135,11 @@ function pedirEnvio(id) {
 async function enviar(id) {
     const t = $('t_' + id).value.trim();
     $('m_' + id).className = 'msg'; $('m_' + id).textContent = 'Enviando…';
-    try { await post('/api/perguntas/responder', { id, texto: t }); delete rascunho[id]; await carregar(); }
+    try {
+        const d = await post('/api/perguntas/responder', { id, texto: t }); delete rascunho[id]; await carregar();
+        const a = d.pergunta && d.pergunta.aprendeu;
+        if (a) { $('aprendeuMsg').innerHTML = `<div class="confirma" style="margin-bottom:14px;background:color-mix(in srgb, var(--verde) 12%, transparent);border-color:color-mix(in srgb, var(--verde) 45%, transparent)"><i class="bi bi-mortarboard"></i> Resposta enviada. ${a.corrigida ? 'O robô aprendeu com a sua correção: nas próximas perguntas parecidas ele segue o que vocês escreveram.' : 'O robô guardou esta resposta como aprovada.'} (${a.conferidas} conferidas, ${a.corrigidas} corrigidas)</div>`; setTimeout(() => { $('aprendeuMsg').innerHTML = ''; }, 9000); }
+    }
     catch (e) { $('m_' + id).className = 'msg err'; $('m_' + id).textContent = e.message; setTimeout(carregar, 2500); }
 }
 async function gerar(id) {
